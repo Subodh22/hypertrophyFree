@@ -698,7 +698,7 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                       <div className="flex-1 px-2 flex justify-center">
                         <input
                           type="number"
-                          value={set.completedWeight}
+                          value={set.completedWeight || set.targetWeight || ''}
                           onChange={(e) => updateSetDetails(
                             exerciseIndex, 
                             setIndex, 
@@ -707,7 +707,7 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                           )}
                           className="w-48 bg-gray-800 rounded text-center py-2 focus:ring-1 focus:ring-neon-green outline-none"
                           min="0"
-                          placeholder="0"
+                          placeholder={set.targetWeight || "0"}
                         />
                       </div>
                       
