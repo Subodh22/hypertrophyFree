@@ -394,12 +394,424 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
     return suggestions;
   };
   
+  // Update next week's workout with suggested weights
+  const updateNextWeekWorkout = async (suggestions: Record<string, { weight: number, reps: number, sets: number }>) => {
+    if (!currentMesocycle || !workout || !user) {
+      console.log("Cannot update next week: missing mesocycle, workout, or user");
+      return;
+    }
+    
+    // Extract numeric week number from workout
+    let currentWeek = 1;
+    try {
+      if (workout.weekNum) {
+        // Remove any non-numeric characters (like "week" in "week1")
+        const numericPart = workout.weekNum.toString().replace(/\D/g, '');
+        currentWeek = parseInt(numericPart);
+      } else if (workout.id && workout.id.includes('w')) {
+        // Try to extract from ID (e.g., workout-w1-0-0)
+        const match = workout.id.match(/w(\d+)/);
+        if (match && match[1]) {
+          currentWeek = parseInt(match[1]);
+        }
+      }
+      
+      if (isNaN(currentWeek)) {
+        console.log("⭐ Week number parsed as NaN, defaulting to 1");
+        currentWeek = 1;
+      }
+    } catch (e) {
+      console.error("Could not determine current week number:", e);
+      currentWeek = 1;
+    }
+    
+    const nextWeek = currentWeek + 1;
+    console.log(`⭐ Current week: ${currentWeek}, Next week: ${nextWeek}`);
+    
+    // Check if we're already at the last week
+    if (nextWeek > currentMesocycle.weeks) {
+      console.log(`⭐ Already at the last week of mesocycle (${currentMesocycle.weeks}), no next week to update`);
+      return;
+    }
+    
+    console.log("⭐ Updating next week's workout with suggestions", suggestions);
+    
+    try {
+      // Current week key and next week key - ENSURE week format matches your database
+      let nextWeekKey = `week${nextWeek}`;
+      
+      console.log(`⭐ Looking for workouts in ${nextWeekKey}`);
+      
+      // Find workout in next week with the same exercises (day of week)
+      const dayOfWeek = new Date(workout.date).getDay(); // 0-6, Sunday-Saturday
+      
+      // Get mesocycle document
+      const docRef = doc(db, 'mesocycles', currentMesocycle.id);
+      const docSnap = await getDoc(docRef);
+      
+      if (!docSnap.exists()) {
+        console.error("Mesocycle not found");
+        return;
+      }
+      
+      const data = docSnap.data();
+      
+      // Log available week keys to help with debugging
+      if (data.workouts) {
+        const availableWeeks = Object.keys(data.workouts);
+        console.log("⭐ Available weeks in mesocycle:", availableWeeks);
+        
+        // If the exact nextWeekKey isn't found, try to find one that corresponds to the next week
+        if (!data.workouts[nextWeekKey]) {
+          console.log(`⭐ Exact key ${nextWeekKey} not found, looking for alternatives...`);
+          
+          // Try alternative formats: week1, Week1, 1, etc.
+          const alternativeKeys = [
+            `week${nextWeek}`, 
+            `Week${nextWeek}`, 
+            `${nextWeek}`,
+            `w${nextWeek}`
+          ];
+          
+          // Also look for keys that might contain the next week number
+          for (const key of availableWeeks) {
+            if (key.includes(nextWeek.toString())) {
+              alternativeKeys.push(key);
+            }
+          }
+          
+          // Try each alternative key
+          for (const altKey of alternativeKeys) {
+            if (data.workouts[altKey]) {
+              console.log(`⭐ Found alternative key: ${altKey}`);
+              // Use this key instead
+              nextWeekKey = altKey;
+              break;
+            }
+          }
+        }
+      }
+      
+      // Check if next week exists (with updated nextWeekKey if necessary)
+      if (!data.workouts || !data.workouts[nextWeekKey]) {
+        console.error(`Next week (${nextWeekKey}) not found in mesocycle`);
+        
+        // Try to find any future week instead
+        const availableWeeks = Object.keys(data.workouts);
+        console.log("⭐ Looking for any future week as a fallback");
+        
+        // Extract numeric parts from week keys
+        const weekNumbers = availableWeeks.map(key => {
+          const numericPart = key.replace(/\D/g, '');
+          return parseInt(numericPart);
+        }).filter(num => !isNaN(num) && num > currentWeek);
+        
+        if (weekNumbers.length > 0) {
+          // Get the smallest week number that's greater than current week
+          const nextAvailableWeek = Math.min(...weekNumbers);
+          const nextAvailableWeekKey = availableWeeks.find(key => key.includes(nextAvailableWeek.toString()));
+          
+          if (nextAvailableWeekKey) {
+            console.log(`⭐ Found future week ${nextAvailableWeekKey} to use instead`);
+            nextWeekKey = nextAvailableWeekKey;
+          } else {
+            return;
+          }
+        } else {
+          return;
+        }
+      }
+      
+      console.log(`⭐ Using week key: ${nextWeekKey}`);
+      
+      // Continue with the rest of the function with the proper nextWeekKey
+      
+      // Find the matching workout in the next week
+      let nextWorkoutIndex = -1;
+      let matchingNextWorkout: any = null;
+      
+      // First try to find a workout with the same exercises
+      if (!data.workouts[nextWeekKey] || !Array.isArray(data.workouts[nextWeekKey])) {
+        console.error(`No workouts array found for week key ${nextWeekKey}`);
+        return;
+      }
+      
+      console.log(`⭐ Found ${data.workouts[nextWeekKey].length} workouts in ${nextWeekKey}`);
+      
+      data.workouts[nextWeekKey].forEach((nextWorkout: any, index: number) => {
+        // Check for same date day of week
+        if (!nextWorkout.date) {
+          console.log(`Workout at index ${index} has no date`);
+          return;
+        }
+        
+        try {
+          const nextWorkoutDay = new Date(nextWorkout.date).getDay();
+          if (nextWorkoutDay === dayOfWeek) {
+            nextWorkoutIndex = index;
+            matchingNextWorkout = nextWorkout;
+            console.log(`⭐ Found matching workout by day of week: ${nextWorkout.name || 'Unnamed workout'}`);
+          }
+        } catch (e) {
+          console.error(`Error parsing date for workout at index ${index}:`, e);
+        }
+      });
+      
+      // If we couldn't find by day of week, try matching by exercise names
+      if (nextWorkoutIndex === -1 && workout.exercises && workout.exercises.length > 0) {
+        console.log("⭐ Trying to find matching workout by exercise names");
+        
+        const currentExerciseNames = workout.exercises.map((ex: any) => ex.name.toLowerCase());
+        
+        data.workouts[nextWeekKey].forEach((nextWorkout: any, index: number) => {
+          if (!nextWorkout.exercises) return;
+          
+          const nextExerciseNames = nextWorkout.exercises.map((ex: any) => ex.name.toLowerCase());
+          
+          // Calculate similarity score (# of matching exercises)
+          let matchCount = 0;
+          currentExerciseNames.forEach((name: string) => {
+            if (nextExerciseNames.includes(name)) matchCount++;
+          });
+          
+          // If we have at least one match and it's better than what we found before
+          if (matchCount > 0) {
+            nextWorkoutIndex = index;
+            matchingNextWorkout = nextWorkout;
+            console.log(`⭐ Found matching workout by exercises: ${nextWorkout.name || 'Unnamed workout'} (${matchCount} matching exercises)`);
+          }
+        });
+      }
+      
+      // If we still couldn't find a match, just use the first workout
+      if (nextWorkoutIndex === -1 && data.workouts[nextWeekKey].length > 0) {
+        nextWorkoutIndex = 0;
+        matchingNextWorkout = data.workouts[nextWeekKey][0];
+        console.log(`⭐ No match found, using first workout in ${nextWeekKey}: ${matchingNextWorkout.name || 'Unnamed workout'}`);
+      }
+      
+      if (nextWorkoutIndex === -1 || !matchingNextWorkout) {
+        console.log("⭐ Could not find any workout in next week");
+        return;
+      }
+      
+      console.log(`⭐ Found workout to update in week ${nextWeek}:`, matchingNextWorkout.name || 'Unnamed workout');
+      
+      // Log details about the current workout exercises and suggestions
+      console.log("⭐ Current workout exercises:", workout.exercises.map((ex: any) => ({
+        id: ex.id,
+        name: ex.name
+      })));
+      
+      console.log("⭐ Suggestion keys:", Object.keys(suggestions));
+      
+      // Update each exercise in the next week's workout
+      let updatedAnyExercises = false;
+      
+      if (matchingNextWorkout.exercises && matchingNextWorkout.exercises.length > 0) {
+        console.log(`⭐ Next workout has ${matchingNextWorkout.exercises.length} exercises`);
+        console.log(`⭐ Next workout name: ${matchingNextWorkout.name}`);
+        
+        // Log all exercises in the workout we're trying to match from
+        console.log("⭐ Current workout exercises:", JSON.stringify(workout.exercises.map((ex: any) => ({
+          id: ex.id,
+          name: ex.name
+        }))));
+        
+        // Log all exercises in the next week's workout
+        console.log("⭐ Next week workout exercises:", JSON.stringify(matchingNextWorkout.exercises.map((ex: any) => ({
+          id: ex.id,
+          name: ex.name
+        }))));
+        
+        // Log all suggestions
+        console.log("⭐ All suggestions:", JSON.stringify(suggestions));
+        
+        // Go through each exercise in the next week's workout
+        matchingNextWorkout.exercises.forEach((nextExercise: any) => {
+          console.log(`⭐ Checking exercise: ${nextExercise.name} (ID: ${nextExercise.id})`);
+          
+          // Try multiple matching strategies
+          let matchFound = false;
+          
+          // 1. First try to match by ID
+          const matchingSuggestion = suggestions[nextExercise.id];
+          
+          if (matchingSuggestion) {
+            console.log(`⭐ Found match by ID for ${nextExercise.name}:`, matchingSuggestion);
+            // Update the exercise's target weight and reps
+            nextExercise.weight = matchingSuggestion.weight.toString();
+            nextExercise.reps = matchingSuggestion.reps.toString();
+            
+            // Update generatedSets if they exist
+            if (nextExercise.generatedSets && Array.isArray(nextExercise.generatedSets)) {
+              nextExercise.generatedSets.forEach((set: any) => {
+                if (set) {
+                  set.targetWeight = matchingSuggestion.weight.toString();
+                  set.targetReps = matchingSuggestion.reps.toString();
+                }
+              });
+            }
+            
+            updatedAnyExercises = true;
+            matchFound = true;
+          } 
+          
+          // 2. If no match by ID, try to match by exact name
+          if (!matchFound) {
+            console.log(`⭐ No match by ID, trying to match by name for: ${nextExercise.name}`);
+            
+            const currentExercise = workout.exercises.find((ex: any) => 
+              ex.name.toLowerCase() === nextExercise.name.toLowerCase()
+            );
+            
+            if (currentExercise && currentExercise.id) {
+              const byNameSuggestion = suggestions[currentExercise.id];
+              if (byNameSuggestion) {
+                console.log(`⭐ Found suggestion by exact name match for ${nextExercise.name}:`, byNameSuggestion);
+                
+                // Update the exercise's target weight and reps
+                nextExercise.weight = byNameSuggestion.weight.toString();
+                nextExercise.reps = byNameSuggestion.reps.toString();
+                
+                // Update generatedSets if they exist
+                if (nextExercise.generatedSets && Array.isArray(nextExercise.generatedSets)) {
+                  nextExercise.generatedSets.forEach((set: any) => {
+                    if (set) {
+                      set.targetWeight = byNameSuggestion.weight.toString();
+                      set.targetReps = byNameSuggestion.reps.toString();
+                    }
+                  });
+                }
+                
+                updatedAnyExercises = true;
+                matchFound = true;
+              }
+            }
+          }
+          
+          // 3. If still no match, try partial name matching
+          if (!matchFound) {
+            console.log(`⭐ No exact name match, trying partial name match for: ${nextExercise.name}`);
+            
+            // Find exercises with similar names
+            const similarExercises = workout.exercises.filter((ex: any) => {
+              // Convert both to lowercase for comparison
+              const currentName = ex.name.toLowerCase();
+              const nextName = nextExercise.name.toLowerCase();
+              
+              // Check if either contains the other
+              return currentName.includes(nextName) || nextName.includes(currentName) ||
+                     // Check for common exercise keywords across both names
+                     (currentName.includes('squat') && nextName.includes('squat')) ||
+                     (currentName.includes('bench') && nextName.includes('bench')) ||
+                     (currentName.includes('press') && nextName.includes('press')) ||
+                     (currentName.includes('row') && nextName.includes('row')) ||
+                     (currentName.includes('curl') && nextName.includes('curl')) ||
+                     (currentName.includes('deadlift') && nextName.includes('deadlift')) ||
+                     (currentName.includes('fly') && nextName.includes('fly'));
+            });
+            
+            if (similarExercises.length > 0) {
+              console.log(`⭐ Found ${similarExercises.length} similar exercises by name`);
+              
+              // Use the first similar exercise
+              const similarExercise = similarExercises[0];
+              const bySimilarNameSuggestion = suggestions[similarExercise.id];
+              
+              if (bySimilarNameSuggestion) {
+                console.log(`⭐ Found suggestion by similar name for ${nextExercise.name} using ${similarExercise.name}:`, bySimilarNameSuggestion);
+                
+                // Update the exercise's target weight and reps
+                nextExercise.weight = bySimilarNameSuggestion.weight.toString();
+                nextExercise.reps = bySimilarNameSuggestion.reps.toString();
+                
+                // Update generatedSets if they exist
+                if (nextExercise.generatedSets && Array.isArray(nextExercise.generatedSets)) {
+                  nextExercise.generatedSets.forEach((set: any) => {
+                    if (set) {
+                      set.targetWeight = bySimilarNameSuggestion.weight.toString();
+                      set.targetReps = bySimilarNameSuggestion.reps.toString();
+                    }
+                  });
+                }
+                
+                updatedAnyExercises = true;
+                matchFound = true;
+              }
+            }
+          }
+          
+          // 4. If all else fails, try matching position (index-based)
+          if (!matchFound && workout.exercises.length > 0) {
+            console.log(`⭐ No matches found by name, trying position-based matching for: ${nextExercise.name}`);
+            
+            // Find the current exercise index
+            const nextExerciseIndex = matchingNextWorkout.exercises.findIndex((ex: any) => ex.id === nextExercise.id);
+            
+            // Only proceed if we found the index and there's a corresponding exercise in the current workout
+            if (nextExerciseIndex !== -1 && nextExerciseIndex < workout.exercises.length) {
+              const positionBasedExercise = workout.exercises[nextExerciseIndex];
+              const byPositionSuggestion = suggestions[positionBasedExercise.id];
+              
+              if (byPositionSuggestion) {
+                console.log(`⭐ Found suggestion by position match for ${nextExercise.name} using ${positionBasedExercise.name}:`, byPositionSuggestion);
+                
+                // Update the exercise's target weight and reps
+                nextExercise.weight = byPositionSuggestion.weight.toString();
+                nextExercise.reps = byPositionSuggestion.reps.toString();
+                
+                // Update generatedSets if they exist
+                if (nextExercise.generatedSets && Array.isArray(nextExercise.generatedSets)) {
+                  nextExercise.generatedSets.forEach((set: any) => {
+                    if (set) {
+                      set.targetWeight = byPositionSuggestion.weight.toString();
+                      set.targetReps = byPositionSuggestion.reps.toString();
+                    }
+                  });
+                }
+                
+                updatedAnyExercises = true;
+                matchFound = true;
+              }
+            }
+          }
+          
+          if (!matchFound) {
+            console.log(`⭐ Could not find any match for exercise: ${nextExercise.name}`);
+          }
+        });
+      } else {
+        console.log("⭐ Next workout has no exercises");
+      }
+      
+      if (updatedAnyExercises) {
+        // Update the document with the new data
+        await updateDoc(docRef, {
+          workouts: data.workouts,
+          updatedAt: new Date().toISOString()
+        });
+        
+        console.log("⭐ Successfully updated next week's workout with new weights and reps!");
+      } else {
+        console.log("No exercises were updated for next week");
+      }
+    } catch (error) {
+      console.error("Error updating next week's workout:", error);
+    }
+  };
+  
   // Mark workout as complete with feedback
-  const completeWorkout = () => {
+  const completeWorkout = async () => {
     if (!workout || !user) return;
     
     // Calculate suggestions for next week
     const suggestions = calculateNextWeekSuggestions();
+    
+    // Update next week's workout with suggested weights if available
+    if (Object.keys(suggestions).length > 0) {
+      await updateNextWeekWorkout(suggestions);
+    }
     
     // Calculate progress data
     const totalSets = exercises.reduce((acc, ex) => acc + ex.sets.length, 0);

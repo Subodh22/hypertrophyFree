@@ -621,8 +621,8 @@ export default function MesocycleProgress({ mesocycle }: MesocycleProgressProps)
                                           <div className="w-5 h-5 rounded-full border-2 border-gray-600"></div>
                                         )}
                                       </div>
-                                    </div>
-                                  ))}
+                            </div>
+                          ))}
                                 </div>
                               </div>
                             );
