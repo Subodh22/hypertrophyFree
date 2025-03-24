@@ -15,14 +15,20 @@ function LoginContent() {
   const { user, loading, signInWithGoogle } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectPath = searchParams.get('redirect') || '/dashboard';
+  // Fix the redirect parameter handling to properly decode the URL
+  const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect');
+  const redirectPath = returnUrl ? decodeURIComponent(returnUrl) : '/dashboard';
   
   // Redirect if already logged in
   useEffect(() => {
     if (!loading && user) {
       console.log("User is logged in, redirecting to", redirectPath);
       setIsRedirecting(true);
-      router.push(redirectPath);
+      
+      // Add a small delay to ensure state updates before navigation
+      setTimeout(() => {
+        router.push(redirectPath);
+      }, 100);
     }
   }, [loading, user, router, redirectPath]);
   

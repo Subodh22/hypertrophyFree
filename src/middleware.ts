@@ -43,7 +43,7 @@ export function middleware(request: NextRequest) {
   // User is not authenticated - redirect to login with return URL
   const url = request.nextUrl.clone();
   url.pathname = '/login';
-  url.search = `?returnUrl=${encodeURIComponent(request.nextUrl.pathname)}`;
+  url.search = `?returnUrl=${pathname}`;
   
   console.log(`Middleware: Redirecting unauthenticated user to login from ${pathname}`);
   return NextResponse.redirect(url);

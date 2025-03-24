@@ -29,9 +29,12 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
       console.log("Protected route: redirecting to login (no user)");
       setRedirecting(true);
       
+      // Get the current path to set as returnUrl
+      const currentPath = window.location.pathname;
+      
       // Add a small delay before redirecting to avoid infinite loops
       const redirectTimeout = setTimeout(() => {
-        router.push('/login');
+        router.push(`/login?returnUrl=${currentPath}`);
       }, 100);
       
       return () => clearTimeout(redirectTimeout);

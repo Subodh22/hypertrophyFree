@@ -112,7 +112,8 @@ export default function AuthCheck({
     if (!isCheckingAuthState && !isPublicRoute) {
       if (!user && !isGuest) {
         console.log("Redirecting to login from", pathname);
-        router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+        // Use returnUrl consistently and without encoding (middleware already handles this)
+        router.push(`/login?returnUrl=${pathname}`);
       }
     }
   }, [user, isGuest, isCheckingAuthState, isPublicRoute, pathname, router]);
