@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import Link from 'next/link';
 import { Dumbbell } from 'lucide-react';
 
-export default function LoginPage() {
+// This component uses searchParams which needs to be wrapped in Suspense
+function LoginContent() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -102,5 +103,25 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Main component that wraps the content in a Suspense boundary
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-pulse flex flex-col items-center">
+            <div className="w-12 h-12 rounded-full bg-neon-green/20 flex items-center justify-center mb-4">
+              <Dumbbell className="w-6 h-6 text-neon-green" />
+            </div>
+            <p className="text-gray-400">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 } 
