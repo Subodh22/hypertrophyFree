@@ -1,4 +1,4 @@
-import Dexie, { Table } from 'dexie';
+import Dexie, { Table, IndexableType } from 'dexie';
 import { Exercise } from './slices/exerciseSlice';
 import { Mesocycle, WorkoutSession } from './slices/workoutSlice';
 import { UserPreferences, UserStats } from './slices/userSlice';
@@ -46,7 +46,7 @@ class WorkoutDatabase extends Dexie {
       .toArray();
   }
 
-  async saveWorkout(workout: WorkoutSession): Promise<string> {
+  async saveWorkout(workout: WorkoutSession): Promise<IndexableType> {
     return this.workouts.put(workout);
   }
 
@@ -71,7 +71,7 @@ class WorkoutDatabase extends Dexie {
     return this.userPreferences.toCollection().first();
   }
 
-  async saveUserPreferences(preferences: UserPreferences): Promise<number> {
+  async saveUserPreferences(preferences: UserPreferences): Promise<IndexableType> {
     await this.userPreferences.clear();
     return this.userPreferences.add(preferences);
   }
@@ -80,7 +80,7 @@ class WorkoutDatabase extends Dexie {
     return this.userStats.toCollection().first();
   }
 
-  async saveUserStats(stats: UserStats): Promise<number> {
+  async saveUserStats(stats: UserStats): Promise<IndexableType> {
     await this.userStats.clear();
     return this.userStats.add(stats);
   }
