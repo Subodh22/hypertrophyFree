@@ -16,12 +16,23 @@ const exerciseTemplates = {
     { id: 'incline-press', name: 'Incline Dumbbell Press', targetSets: 3, targetReps: 10, targetRIR: 2 },
     { id: 'chest-fly', name: 'Cable Chest Fly', targetSets: 3, targetReps: 12, targetRIR: 1 },
     { id: 'dips', name: 'Chest Dips', targetSets: 3, targetReps: 10, targetRIR: 2 },
+    { id: 'incline-barbell-press', name: 'Incline Barbell Press', targetSets: 4, targetReps: 8, targetRIR: 2 },
+    { id: 'flat-dumbbell-press', name: 'Flat Dumbbell Press', targetSets: 4, targetReps: 10, targetRIR: 2 },
+    { id: 'close-grip-bench', name: 'Close-Grip Bench Press', targetSets: 4, targetReps: 10, targetRIR: 2 },
   ],
   back: [
     { id: 'pull-up', name: 'Pull-ups', targetSets: 4, targetReps: 8, targetRIR: 2 },
     { id: 'barbell-row', name: 'Barbell Row', targetSets: 4, targetReps: 10, targetRIR: 2 },
     { id: 'lat-pulldown', name: 'Lat Pulldown', targetSets: 3, targetReps: 12, targetRIR: 1 },
     { id: 'cable-row', name: 'Seated Cable Row', targetSets: 3, targetReps: 12, targetRIR: 1 },
+    { id: 'pendlay-row', name: 'Pendlay Row', targetSets: 4, targetReps: 8, targetRIR: 2 },
+    { id: 'bent-over-row', name: 'Bent-Over Barbell Row', targetSets: 4, targetReps: 8, targetRIR: 2 },
+    { id: 'chin-up', name: 'Chin-Ups', targetSets: 4, targetReps: 8, targetRIR: 2 },
+    { id: 'weighted-pull-up', name: 'Weighted Pull-Ups', targetSets: 4, targetReps: 8, targetRIR: 2 },
+    { id: 'tbar-row', name: 'T-Bar Rows', targetSets: 4, targetReps: 10, targetRIR: 2 },
+    { id: 'single-arm-row', name: 'Single-Arm Dumbbell Row', targetSets: 4, targetReps: 10, targetRIR: 2 },
+    { id: 'chest-supported-row', name: 'Chest-Supported Row', targetSets: 4, targetReps: 10, targetRIR: 2 },
+    { id: 'face-pull', name: 'Face Pulls', targetSets: 3, targetReps: 15, targetRIR: 1 },
   ],
   legs: [
     { id: 'squat', name: 'Barbell Squat', targetSets: 4, targetReps: 8, targetRIR: 2 },
@@ -29,6 +40,37 @@ const exerciseTemplates = {
     { id: 'leg-press', name: 'Leg Press', targetSets: 3, targetReps: 12, targetRIR: 1 },
     { id: 'leg-extension', name: 'Leg Extension', targetSets: 3, targetReps: 15, targetRIR: 1 },
     { id: 'leg-curl', name: 'Leg Curl', targetSets: 3, targetReps: 12, targetRIR: 1 },
+    { id: 'front-squat', name: 'Front Squat', targetSets: 4, targetReps: 8, targetRIR: 2 },
+    { id: 'rdl', name: 'Romanian Deadlift', targetSets: 3, targetReps: 10, targetRIR: 2 },
+    { id: 'walking-lunge', name: 'Walking Lunges', targetSets: 3, targetReps: 10, targetRIR: 2 },
+    { id: 'calf-raise', name: 'Standing Calf Raises', targetSets: 3, targetReps: 15, targetRIR: 1 },
+    { id: 'seated-calf-raise', name: 'Seated Calf Raises', targetSets: 3, targetReps: 15, targetRIR: 1 },
+    { id: 'hip-thrust', name: 'Hip Thrusts', targetSets: 3, targetReps: 10, targetRIR: 2 },
+    { id: 'hack-squat', name: 'Hack Squats', targetSets: 4, targetReps: 10, targetRIR: 2 },
+    { id: 'safety-bar-squat', name: 'Safety Bar Squats', targetSets: 4, targetReps: 8, targetRIR: 2 },
+    { id: 'stiff-legged-deadlift', name: 'Stiff-Legged Deadlifts', targetSets: 4, targetReps: 10, targetRIR: 2 },
+    { id: 'bulgarian-split-squat', name: 'Bulgarian Split Squats', targetSets: 3, targetReps: 10, targetRIR: 2 },
+  ],
+  shoulders: [
+    { id: 'military-press', name: 'Standing Barbell Military Press', targetSets: 3, targetReps: 8, targetRIR: 2 },
+    { id: 'db-shoulder-press', name: 'Seated Dumbbell Shoulder Press', targetSets: 3, targetReps: 10, targetRIR: 2 },
+    { id: 'lateral-raise', name: 'Lateral Raises', targetSets: 3, targetReps: 15, targetRIR: 1 },
+    { id: 'push-press', name: 'Push Press', targetSets: 4, targetReps: 8, targetRIR: 2 },
+    { id: 'arnold-press', name: 'Arnold Presses', targetSets: 4, targetReps: 10, targetRIR: 2 },
+    { id: 'upright-row', name: 'Upright Rows', targetSets: 4, targetReps: 12, targetRIR: 1 },
+  ],
+  arms: [
+    { id: 'tricep-pushdown', name: 'Tricep Pushdowns', targetSets: 3, targetReps: 12, targetRIR: 1 },
+    { id: 'ez-curl', name: 'EZ-Bar Curls', targetSets: 3, targetReps: 10, targetRIR: 1 },
+    { id: 'hammer-curl', name: 'Hammer Curls', targetSets: 3, targetReps: 12, targetRIR: 1 },
+    { id: 'overhead-extension', name: 'Overhead Tricep Extensions', targetSets: 3, targetReps: 12, targetRIR: 1 },
+    { id: 'dips', name: 'Dips', targetSets: 4, targetReps: 10, targetRIR: 2 },
+    { id: 'incline-curl', name: 'Incline Dumbbell Curls', targetSets: 4, targetReps: 10, targetRIR: 1 },
+    { id: 'cable-curl', name: 'Cable Curls', targetSets: 4, targetReps: 12, targetRIR: 1 },
+    { id: 'preacher-curl', name: 'Preacher Curls', targetSets: 4, targetReps: 10, targetRIR: 1 },
+    { id: 'rope-pushdown', name: 'Rope Pushdowns', targetSets: 4, targetReps: 12, targetRIR: 1 },
+    { id: 'reverse-curl', name: 'Reverse Curls', targetSets: 3, targetReps: 12, targetRIR: 1 },
+    { id: 'spider-curl', name: 'Spider Curls', targetSets: 4, targetReps: 12, targetRIR: 1 },
   ],
 };
 
@@ -49,6 +91,12 @@ const weeklyTemplates = {
     { day: "Monday", name: "Full Body A", muscleGroups: ["chest", "back", "legs"] },
     { day: "Wednesday", name: "Full Body B", muscleGroups: ["chest", "back", "legs"] },
     { day: "Friday", name: "Full Body C", muscleGroups: ["chest", "back", "legs"] },
+  ],
+  "Dr. Israetel 4-Week Hypertrophy": [
+    { day: "Monday", name: "Upper Body A", muscleGroups: ["chest", "back", "shoulders", "arms"] },
+    { day: "Tuesday", name: "Lower Body A", muscleGroups: ["legs"] },
+    { day: "Thursday", name: "Upper Body B", muscleGroups: ["chest", "back", "shoulders", "arms"] },
+    { day: "Friday", name: "Lower Body B", muscleGroups: ["legs"] },
   ],
 };
 
@@ -87,10 +135,11 @@ export type WeeklyWorkoutTemplate = {
 
 // Define weekly RPE targets
 const weeklyRPE: Record<number, { min: number; max: number; label: string }> = {
-  1: { min: 5, max: 6, label: "Low intensity, focus on technique and volume" },
-  2: { min: 6, max: 7, label: "Moderate intensity, slight progression in load or effort" },
-  3: { min: 7, max: 8, label: "High intensity, pushing closer to failure" },
-  4: { min: 0, max: 0, label: "Deload week with minimal or no training" }
+  1: { min: 6, max: 7, label: "MEV Introduction (3-4 RIR) - Focus on technique and form" },
+  2: { min: 7, max: 8, label: "Volume Accumulation (2-3 RIR) - Progressive overload begins" },
+  3: { min: 8, max: 9, label: "MAV Optimization (1-2 RIR) - Higher intensity week" },
+  4: { min: 9, max: 10, label: "MRV Peaking (0-1 RIR) - Maximum recoverable volume" },
+  5: { min: 6, max: 7, label: "Deload week (3-4 RIR) - Reduced volume and intensity" }
 };
 
 export default function CreateMesocyclePage() {
@@ -293,12 +342,15 @@ export default function CreateMesocyclePage() {
   // Function to create workout templates from the selected template
   const createWorkoutTemplates = (selectedTemplateName: string): WeeklyWorkoutTemplate[] => {
     const templates: WeeklyWorkoutTemplate[] = [];
-    
-    // Get the selected template configuration
-    const selectedTemplateConfig = weeklyTemplates[selectedTemplateName as keyof typeof weeklyTemplates];
+    const selectedTemplateConfig = weeklyTemplates[selectedTemplateName as keyof typeof weeklyTemplates] || [];
     
     console.log('Selected template:', selectedTemplateName);
     console.log('Template config:', selectedTemplateConfig);
+    
+    // Special handling for Dr. Israetel template
+    if (selectedTemplateName === "Dr. Israetel 4-Week Hypertrophy") {
+      return createIsraetelHypertrophyTemplate();
+    }
     
     // Create a workout template for each day
     selectedTemplateConfig.forEach((day) => {
@@ -357,6 +409,344 @@ export default function CreateMesocyclePage() {
     });
     
     console.log('Final templates:', templates);
+    return templates;
+  };
+  
+  // Special function to create Dr. Israetel's detailed hypertrophy template
+  const createIsraetelHypertrophyTemplate = (): WeeklyWorkoutTemplate[] => {
+    const templates: WeeklyWorkoutTemplate[] = [];
+    
+    // Log deload status
+    console.log('Creating Dr. Israetel template with includeDeload:', includeDeload);
+    
+    // Upper Body A (Monday)
+    const upperBodyA: ExerciseTemplate[] = [
+      {
+        id: 'bench-press-chest',
+        name: 'Barbell Bench Press',
+        muscleGroup: 'chest',
+        sets: 4,
+        reps: 8,
+        notes: 'Progressive overload focus, 3-4 RIR in week 1, 0-1 RIR by week 4'
+      },
+      {
+        id: 'bent-over-row-back',
+        name: 'Bent-Over Barbell Rows',
+        muscleGroup: 'back',
+        sets: 4,
+        reps: 8,
+        notes: 'Focus on controlled eccentric phase'
+      },
+      {
+        id: 'military-press-shoulders',
+        name: 'Standing Barbell Military Press',
+        muscleGroup: 'shoulders',
+        sets: 3,
+        reps: 8,
+        notes: 'Maintain tight core for stability'
+      },
+      {
+        id: 'pull-up-back',
+        name: 'Pull-Ups or Lat Pulldowns',
+        muscleGroup: 'back',
+        sets: 3,
+        reps: 10,
+        notes: 'Use assisted pull-ups if needed'
+      },
+      {
+        id: 'tricep-pushdown-arms',
+        name: 'Tricep Pushdowns',
+        muscleGroup: 'arms',
+        sets: 3,
+        reps: 12,
+        notes: 'Focus on full extension'
+      },
+      {
+        id: 'ez-curl-arms',
+        name: 'EZ-Bar Curls',
+        muscleGroup: 'arms',
+        sets: 3,
+        reps: 10,
+        notes: 'Controlled tempo'
+      }
+    ];
+    
+    // Lower Body A (Tuesday)
+    const lowerBodyA: ExerciseTemplate[] = [
+      {
+        id: 'squat-legs',
+        name: 'Barbell Back Squats',
+        muscleGroup: 'legs',
+        sets: 4,
+        reps: 8,
+        notes: 'Focus on depth and knee tracking'
+      },
+      {
+        id: 'rdl-legs',
+        name: 'Romanian Deadlifts',
+        muscleGroup: 'legs',
+        sets: 3,
+        reps: 10,
+        notes: 'Maintain flat back throughout movement'
+      },
+      {
+        id: 'leg-press-legs',
+        name: 'Leg Press',
+        muscleGroup: 'legs',
+        sets: 3,
+        reps: 12,
+        notes: 'Full range of motion'
+      },
+      {
+        id: 'leg-curl-legs',
+        name: 'Leg Curls',
+        muscleGroup: 'legs',
+        sets: 3,
+        reps: 12,
+        notes: 'Control the eccentric phase'
+      },
+      {
+        id: 'calf-raise-legs',
+        name: 'Standing Calf Raises',
+        muscleGroup: 'legs',
+        sets: 3,
+        reps: 15,
+        notes: 'Full stretch at bottom, full contraction at top'
+      }
+    ];
+    
+    // Upper Body B (Thursday)
+    const upperBodyB: ExerciseTemplate[] = [
+      {
+        id: 'incline-press-chest',
+        name: 'Incline Dumbbell Press',
+        muscleGroup: 'chest',
+        sets: 4,
+        reps: 10,
+        notes: 'Focus on upper chest activation'
+      },
+      {
+        id: 'cable-row-back',
+        name: 'Seated Cable Rows',
+        muscleGroup: 'back',
+        sets: 4,
+        reps: 10,
+        notes: 'Squeeze shoulder blades together'
+      },
+      {
+        id: 'lateral-raise-shoulders',
+        name: 'Lateral Raises',
+        muscleGroup: 'shoulders',
+        sets: 3,
+        reps: 15,
+        notes: 'Keep slight bend in elbows'
+      },
+      {
+        id: 'face-pull-back',
+        name: 'Face Pulls',
+        muscleGroup: 'back',
+        sets: 3,
+        reps: 15,
+        notes: 'Focus on external rotation at end range'
+      },
+      {
+        id: 'overhead-extension-arms',
+        name: 'Overhead Tricep Extensions',
+        muscleGroup: 'arms',
+        sets: 3,
+        reps: 12,
+        notes: 'Keep elbows close to head'
+      },
+      {
+        id: 'hammer-curl-arms',
+        name: 'Hammer Curls',
+        muscleGroup: 'arms',
+        sets: 3,
+        reps: 12,
+        notes: 'Focus on brachialis development'
+      }
+    ];
+    
+    // Lower Body B (Friday)
+    const lowerBodyB: ExerciseTemplate[] = [
+      {
+        id: 'front-squat-legs',
+        name: 'Front Squats',
+        muscleGroup: 'legs',
+        sets: 4,
+        reps: 8,
+        notes: 'Maintain upright torso'
+      },
+      {
+        id: 'hip-thrust-legs',
+        name: 'Hip Thrusts',
+        muscleGroup: 'legs',
+        sets: 3,
+        reps: 10,
+        notes: 'Full hip extension at top'
+      },
+      {
+        id: 'walking-lunge-legs',
+        name: 'Walking Lunges',
+        muscleGroup: 'legs',
+        sets: 3,
+        reps: 10,
+        notes: '10 steps per leg'
+      },
+      {
+        id: 'leg-extension-legs',
+        name: 'Leg Extensions',
+        muscleGroup: 'legs',
+        sets: 3,
+        reps: 15,
+        notes: 'Focus on quad contraction'
+      },
+      {
+        id: 'seated-calf-raise-legs',
+        name: 'Seated Calf Raises',
+        muscleGroup: 'legs',
+        sets: 3,
+        reps: 15,
+        notes: 'Emphasize soleus activation'
+      }
+    ];
+    
+    // Deload Upper Body
+    const deloadUpperBody: ExerciseTemplate[] = [
+      {
+        id: 'machine-chest-press-chest',
+        name: 'Machine Chest Press',
+        muscleGroup: 'chest',
+        sets: 3,
+        reps: 12,
+        notes: 'Deload week: reduced weight, moderate reps'
+      },
+      {
+        id: 'lat-pulldown-back',
+        name: 'Lat Pulldowns',
+        muscleGroup: 'back',
+        sets: 3,
+        reps: 12,
+        notes: 'Deload week: focus on technique'
+      },
+      {
+        id: 'lateral-raise-shoulders',
+        name: 'Dumbbell Lateral Raises',
+        muscleGroup: 'shoulders',
+        sets: 2,
+        reps: 15,
+        notes: 'Light weight, focus on controlled motion'
+      },
+      {
+        id: 'face-pull-back',
+        name: 'Cable Face Pulls',
+        muscleGroup: 'back',
+        sets: 2,
+        reps: 15,
+        notes: 'Emphasize scapular retraction'
+      },
+      {
+        id: 'tricep-pushdown-arms',
+        name: 'Tricep Pushdowns',
+        muscleGroup: 'arms',
+        sets: 2,
+        reps: 15,
+        notes: 'Light weight, focus on contraction'
+      },
+      {
+        id: 'dumbbell-curl-arms',
+        name: 'Dumbbell Curls',
+        muscleGroup: 'arms',
+        sets: 2,
+        reps: 15,
+        notes: 'Controlled tempo'
+      }
+    ];
+    
+    // Deload Lower Body
+    const deloadLowerBody: ExerciseTemplate[] = [
+      {
+        id: 'leg-press-legs',
+        name: 'Leg Press',
+        muscleGroup: 'legs',
+        sets: 3,
+        reps: 12,
+        notes: 'Deload week: reduced weight, focus on form'
+      },
+      {
+        id: 'rdl-legs',
+        name: 'Romanian Deadlifts',
+        muscleGroup: 'legs',
+        sets: 3,
+        reps: 12,
+        notes: 'Light weight, perfect form'
+      },
+      {
+        id: 'leg-curl-legs',
+        name: 'Leg Curls',
+        muscleGroup: 'legs',
+        sets: 2,
+        reps: 15,
+        notes: 'Focus on hamstring contraction'
+      },
+      {
+        id: 'leg-extension-legs',
+        name: 'Leg Extensions',
+        muscleGroup: 'legs',
+        sets: 2,
+        reps: 15,
+        notes: 'Light weight, full range of motion'
+      },
+      {
+        id: 'calf-raise-legs',
+        name: 'Body Weight Calf Raises',
+        muscleGroup: 'legs',
+        sets: 2,
+        reps: 20,
+        notes: 'Focus on full stretch and contraction'
+      }
+    ];
+    
+    // Add all workouts to the template
+    templates.push({
+      name: "Upper Body A",
+      days: [1], // Monday
+      exercises: upperBodyA
+    });
+    
+    templates.push({
+      name: "Lower Body A",
+      days: [2], // Tuesday
+      exercises: lowerBodyA
+    });
+    
+    templates.push({
+      name: "Upper Body B",
+      days: [4], // Thursday
+      exercises: upperBodyB
+    });
+    
+    templates.push({
+      name: "Lower Body B",
+      days: [5], // Friday
+      exercises: lowerBodyB
+    });
+    
+    // Add deload workouts if needed
+    if (includeDeload) {
+      templates.push({
+        name: "Deload Upper Body",
+        days: [1], // Monday (week 5)
+        exercises: deloadUpperBody
+      });
+      
+      templates.push({
+        name: "Deload Lower Body",
+        days: [3], // Wednesday (week 5)
+        exercises: deloadLowerBody
+      });
+    }
+    
     return templates;
   };
   
