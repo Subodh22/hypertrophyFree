@@ -21,14 +21,15 @@ import {
   Info, 
   Circle, 
   Plus, 
-  Trash 
+  Trash, 
+  AlertTriangle 
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Modal } from "@/components/ui/Modal";
 import Link from 'next/link';
 import { format } from 'date-fns';
 import LoadingScreen from '@/components/LoadingScreen';
-import { updateWorkoutProgress } from '@/lib/slices/workoutSlice';
+import { updateWorkoutProgress, updateMesocycleAsync } from '@/lib/slices/workoutSlice';
 import WeightFeelingSurvey from '@/components/WeightFeelingSurvey';
 
 export default function WorkoutDetailPage({ params }: { params: { id: string } }) {
@@ -62,6 +63,10 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
   const [isCompleting, setIsCompleting] = useState(false);
   const [suggestionModalOpen, setSuggestionModalOpen] = useState(false);
   const [weightSuggestions, setWeightSuggestions] = useState<Record<string, { weight: number, reps: number, sets: number, exerciseName: string, exerciseId: string }>>({});
+  
+  // Delete exercise confirmation modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [exerciseToDelete, setExerciseToDelete] = useState<any>(null);
   
   // Find workout details from mesocycle
   useEffect(() => {
@@ -1445,6 +1450,122 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
     setTimer(seconds);
   };
   
+  // Function to handle deleting an exercise from a single workout
+  const deleteExercise = async (exerciseIndex: number) => {
+    if (!workout || !currentMesocycle) return;
+    
+    try {
+      setIsCompleting(true);
+      
+      const updatedExercises = [...exercises];
+      updatedExercises.splice(exerciseIndex, 1);
+      
+      // Find the week and workout index
+      const weekKey = `week${workout.week}`;
+      const workoutIndex = currentMesocycle.workouts[weekKey].findIndex(w => w.id === workout.id);
+      
+      if (workoutIndex === -1) {
+        toast.error("Could not find workout to update");
+        setIsCompleting(false);
+        return;
+      }
+      
+      // Create update record
+      const updates: Record<string, any> = {};
+      updates[`workouts.${weekKey}.${workoutIndex}.exercises`] = updatedExercises;
+      
+      // Update in Redux and Firestore
+      if (user) {
+        await dispatch(updateMesocycleAsync({
+          id: currentMesocycle.id,
+          updates,
+          userId: user.uid
+        }) as any);
+        
+        toast.success("Exercise removed from this workout");
+        
+        // Refresh the page to show the updated workout
+        window.location.reload();
+      } else {
+        // If no user (offline mode), just update the local state
+        setExercises(updatedExercises);
+        toast.success("Exercise removed from this workout");
+      }
+    } catch (error: unknown) {
+      console.error("Error deleting exercise:", error);
+      toast.error("Failed to delete exercise. Please try again.");
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+  
+  // Function to delete an exercise from all weeks in the mesocycle
+  const deleteExerciseFromAllWeeks = async () => {
+    if (!user || !currentMesocycle || !exerciseToDelete) {
+      toast.error("Missing required data to delete exercise");
+      setDeleteModalOpen(false);
+      return;
+    }
+    
+    console.log("🗑️ Deleting exercise from all weeks:", exerciseToDelete.name);
+    
+    try {
+      setIsCompleting(true);
+      
+      // Deep copy mesocycle to avoid mutating state directly
+      const updatedMesocycle = JSON.parse(JSON.stringify(currentMesocycle));
+      const baseExerciseId = exerciseToDelete.baseExerciseId;
+      let exerciseRemoved = false;
+      
+      // Loop through all weeks and workouts to find exercises with the same baseExerciseId
+      Object.keys(updatedMesocycle.workouts).forEach(weekKey => {
+        const weekWorkouts = updatedMesocycle.workouts[weekKey];
+        
+        weekWorkouts.forEach((workout: any, workoutIndex: number) => {
+          // Find all exercises with the matching baseExerciseId
+          const exercisesToRemove = workout.exercises
+            .map((ex: any, index: number) => ({ ex, index }))
+            .filter(({ ex }: { ex: any }) => ex.baseExerciseId === baseExerciseId)
+            .sort((a: any, b: any) => b.index - a.index); // Sort in reverse order so we can splice without affecting indices
+          
+          // Remove each matching exercise
+          exercisesToRemove.forEach(({ index }: { index: number }) => {
+            workout.exercises.splice(index, 1);
+            exerciseRemoved = true;
+          });
+        });
+      });
+      
+      if (!exerciseRemoved) {
+        toast.error("Could not find matching exercises to delete");
+        setIsCompleting(false);
+        setDeleteModalOpen(false);
+        return;
+      }
+      
+      // Update Redux with the modified mesocycle
+      await dispatch(updateMesocycleAsync({
+        id: currentMesocycle.id,
+        updates: { workouts: updatedMesocycle.workouts },
+        userId: user.uid
+      }) as any);
+      
+      toast.success(`${exerciseToDelete.name} removed from all workouts`);
+      
+      // Close the modal and clear the exercise to delete
+      setDeleteModalOpen(false);
+      setExerciseToDelete(null);
+      
+      // Refresh the page to show the updated workout
+      window.location.reload();
+    } catch (error: unknown) {
+      console.error("Error in deleteExerciseFromAllWeeks:", error);
+      toast.error("An unexpected error occurred. Please try again.");
+      setIsCompleting(false);
+      setDeleteModalOpen(false);
+    }
+  };
+  
   if (loading) {
     return <LoadingScreen message="Loading workout..." />;
   }
@@ -1757,7 +1878,14 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                       <button className="btn-secondary py-1 px-3 text-sm">
                         <Plus className="w-3 h-3 mr-1" /> Add Set
                       </button>
-                      <button className="text-red-500 py-1 px-2 text-sm">
+                      <button 
+                        className="text-red-500 py-1 px-2 text-sm hover:bg-red-500/10 rounded"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent the exercise from toggling expand/collapse
+                          setExerciseToDelete(exercise);
+                          setDeleteModalOpen(true);
+                        }}
+                      >
                         <Trash className="w-3 h-3" />
                       </button>
                     </div>
@@ -1887,6 +2015,86 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
               onClick={() => setSuggestionModalOpen(false)}
             >
               Close
+            </button>
+          </div>
+        </div>
+      </Modal>
+      
+      {/* Delete Exercise Confirmation Modal */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setExerciseToDelete(null);
+        }}
+        title="Delete Exercise"
+      >
+        <div className="p-4">
+          {exerciseToDelete && (
+            <div className="space-y-4">
+              <p className="text-gray-300">
+                Do you want to delete <span className="text-white font-semibold">{exerciseToDelete.name}</span> from:
+              </p>
+              
+              <div className="flex flex-col gap-3 mt-2">
+                <button
+                  className="bg-gray-800 hover:bg-gray-700 text-white font-medium px-4 py-3 rounded flex items-center"
+                  onClick={async () => {
+                    // Delete from current workout only
+                    const exerciseIndex = exercises.findIndex(ex => ex.id === exerciseToDelete.id);
+                    if (exerciseIndex !== -1) {
+                      setDeleteModalOpen(false); // Close modal first
+                      await deleteExercise(exerciseIndex);
+                      // Page will reload automatically from the deleteExercise function
+                    } else {
+                      setDeleteModalOpen(false);
+                      setExerciseToDelete(null);
+                      toast.error("Could not find exercise to delete");
+                    }
+                  }}
+                  disabled={isCompleting}
+                >
+                  <span className="flex-1 text-left">This workout only</span>
+                  {isCompleting && (
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-r-transparent rounded-full ml-2"></div>
+                  )}
+                </button>
+                
+                <button
+                  className="bg-red-900/50 hover:bg-red-900/70 text-white font-medium px-4 py-3 rounded flex items-center"
+                  onClick={deleteExerciseFromAllWeeks}
+                  disabled={isCompleting}
+                >
+                  <span className="flex-1 text-left">All workouts in this mesocycle</span>
+                  {isCompleting && (
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-r-transparent rounded-full ml-2"></div>
+                  )}
+                </button>
+              </div>
+              
+              <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3 mt-2">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="text-yellow-500 w-5 h-5 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-yellow-200">
+                      Deleting this exercise from all workouts will remove it permanently from every week in this mesocycle.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              className="bg-gray-700 hover:bg-gray-600 text-white font-medium px-4 py-2 rounded"
+              onClick={() => {
+                setDeleteModalOpen(false);
+                setExerciseToDelete(null);
+              }}
+              disabled={isCompleting}
+            >
+              Cancel
             </button>
           </div>
         </div>
