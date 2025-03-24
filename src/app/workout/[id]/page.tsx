@@ -22,7 +22,8 @@ import {
   Circle, 
   Plus, 
   Trash, 
-  AlertTriangle 
+  AlertTriangle,
+  Dumbbell
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Modal } from "@/components/ui/Modal";
@@ -67,6 +68,17 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
   // Delete exercise confirmation modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [exerciseToDelete, setExerciseToDelete] = useState<any>(null);
+  
+  // Add Exercise modal state
+  const [addExerciseModalOpen, setAddExerciseModalOpen] = useState(false);
+  const [newExercise, setNewExercise] = useState({
+    name: "",
+    sets: 3,
+    reps: 10,
+    weight: "",
+    muscleGroup: "other",
+    propagateToAllWeeks: true
+  });
   
   // Find workout details from mesocycle
   useEffect(() => {
@@ -1425,15 +1437,15 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
           
           console.log(`⭐ Successfully updated ${updatedExercises.length} exercises in next week's workouts`);
           toast.success(`Next week's target weights have been updated for ${updatedExercises.length} exercises`);
-        } else {
+      } else {
           console.log(`⭐ No exercises were updated`);
           toast.error("No exercises in next week's workout could be matched to update");
-        }
+      }
         
         // Navigate to mesocycle page
         router.push(`/mesocycle/${currentMesocycle.id}`);
     } catch (error) {
-        console.error("Error updating next week's workout:", error);
+      console.error("Error updating next week's workout:", error);
         toast.error("Failed to update next week's weights. Please try again.");
       }
     } catch (error) {
@@ -1451,51 +1463,54 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
   };
   
   // Function to handle deleting an exercise from a single workout
-  const deleteExercise = async (exerciseIndex: number) => {
+  const deleteExercise = (exerciseIndex: number) => {
     if (!workout || !currentMesocycle) return;
     
-    try {
-      setIsCompleting(true);
-      
-      const updatedExercises = [...exercises];
-      updatedExercises.splice(exerciseIndex, 1);
-      
-      // Find the week and workout index
-      const weekKey = `week${workout.week}`;
-      const workoutIndex = currentMesocycle.workouts[weekKey].findIndex(w => w.id === workout.id);
-      
-      if (workoutIndex === -1) {
-        toast.error("Could not find workout to update");
-        setIsCompleting(false);
-        return;
-      }
-      
-      // Create update record
-      const updates: Record<string, any> = {};
-      updates[`workouts.${weekKey}.${workoutIndex}.exercises`] = updatedExercises;
-      
-      // Update in Redux and Firestore
-      if (user) {
-        await dispatch(updateMesocycleAsync({
-          id: currentMesocycle.id,
-          updates,
-          userId: user.uid
-        }) as any);
-        
+    // Update local state immediately
+    const updatedExercises = [...exercises];
+    updatedExercises.splice(exerciseIndex, 1);
+    setExercises(updatedExercises);
+    
+    // Find the week and workout index
+    const weekKey = `week${workout.week}`;
+    const workoutIndex = currentMesocycle.workouts[weekKey].findIndex(w => w.id === workout.id);
+    
+    if (workoutIndex === -1) {
+      toast.error("Could not find workout to update");
+      return;
+    }
+    
+    // Create deep copy of the mesocycle to update
+    const updatedMesocycle = JSON.parse(JSON.stringify(currentMesocycle));
+    
+    // Remove the exercise from the copied mesocycle
+    updatedMesocycle.workouts[weekKey][workoutIndex].exercises.splice(exerciseIndex, 1);
+    
+    // Create update record
+    const updates: Record<string, any> = {
+      workouts: updatedMesocycle.workouts
+    };
+    
+    // Update in Redux and Firestore
+    if (user) {
+      // Use the thunk to update the mesocycle in the store and Firestore
+      dispatch(updateMesocycleAsync({
+        id: currentMesocycle.id,
+        updates,
+        userId: user.uid
+      }) as any).then(() => {
+        // Make sure active exercise index doesn't point to a non-existent exercise
+        if (activeExercise !== null && activeExercise >= exerciseIndex) {
+          setActiveExercise(activeExercise > 0 ? activeExercise - 1 : null);
+        }
         toast.success("Exercise removed from this workout");
-        
-        // Refresh the page to show the updated workout
-        window.location.reload();
-      } else {
-        // If no user (offline mode), just update the local state
-        setExercises(updatedExercises);
-        toast.success("Exercise removed from this workout");
-      }
-    } catch (error: unknown) {
-      console.error("Error deleting exercise:", error);
-      toast.error("Failed to delete exercise. Please try again.");
-    } finally {
-      setIsCompleting(false);
+      }).catch((error: Error) => {
+        console.error("Error removing exercise:", error);
+        toast.error("Failed to remove exercise. Please try again.");
+      });
+    } else {
+      // For offline mode
+      toast.success("Exercise removed from this workout");
     }
   };
   
@@ -1544,25 +1559,209 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
       }
       
       // Update Redux with the modified mesocycle
-      await dispatch(updateMesocycleAsync({
+      dispatch(updateMesocycleAsync({
         id: currentMesocycle.id,
         updates: { workouts: updatedMesocycle.workouts },
         userId: user.uid
-      }) as any);
-      
-      toast.success(`${exerciseToDelete.name} removed from all workouts`);
-      
-      // Close the modal and clear the exercise to delete
-      setDeleteModalOpen(false);
-      setExerciseToDelete(null);
-      
-      // Refresh the page to show the updated workout
-      window.location.reload();
+      }) as any).then(() => {
+        // Also update the current exercises in state (for UI)
+        const updatedExercises = exercises.filter(ex => ex.baseExerciseId !== baseExerciseId);
+        setExercises(updatedExercises);
+        
+        toast.success(`${exerciseToDelete.name} removed from all workouts`);
+        
+        // Close the modal and clear the exercise to delete
+        setDeleteModalOpen(false);
+        setExerciseToDelete(null);
+        setIsCompleting(false);
+      }).catch((error: Error) => {
+        console.error("Error deleting exercise from all weeks:", error);
+        toast.error("Failed to delete exercise. Please try again.");
+        setIsCompleting(false);
+        setDeleteModalOpen(false);
+      });
     } catch (error: unknown) {
       console.error("Error in deleteExerciseFromAllWeeks:", error);
       toast.error("An unexpected error occurred. Please try again.");
       setIsCompleting(false);
       setDeleteModalOpen(false);
+    }
+  };
+  
+  // Function to add a new custom exercise
+  const addCustomExercise = async () => {
+    if (!workout || !currentMesocycle) {
+      toast.error("Cannot add exercise: missing workout or mesocycle data");
+      return;
+    }
+    
+    try {
+      // Generate unique IDs for the exercise
+      const exerciseId = `exercise-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const baseExerciseId = exerciseId; // Use the same ID as base ID for tracking across weeks
+      
+      // Create generatedSets for the exercise
+      const generatedSets = Array.from({ length: newExercise.sets }, (_, i) => ({
+        id: `${exerciseId}-set-${i+1}`,
+        number: i + 1,
+        targetReps: newExercise.reps.toString(),
+        targetWeight: newExercise.weight || "",
+        completedReps: "",
+        completedWeight: ""
+      }));
+      
+      // Create the new exercise object - make structure match existing exercises
+      const exerciseToAdd = {
+        id: exerciseId,
+        name: newExercise.name,
+        muscleGroup: newExercise.muscleGroup,
+        sets: newExercise.sets, // This should be a number, not an array
+        reps: newExercise.reps,
+        weight: newExercise.weight || "",
+        notes: "",
+        generatedSets, // This is where the actual set data goes
+        weightFeeling: "",
+        baseExerciseId,
+        feedback: {
+          weightFeeling: "",
+          muscleActivation: "",
+          performanceRating: "",
+          notes: "",
+          timestamp: ""
+        }
+      };
+      
+      console.log(`⭐ Adding new exercise: ${newExercise.name} with ${newExercise.sets} sets`);
+      
+      // Add to local state immediately
+      setExercises(prevExercises => [...prevExercises, exerciseToAdd]);
+      
+      // Extract the correct week number from the weekNum field directly
+      const weekKey = `week${workout.week || workout.weekNum}`;
+      
+      console.log(`⭐ Looking for workout in ${weekKey}, workout ID: ${workout.id}`);
+      console.log(`⭐ Available weeks: ${Object.keys(currentMesocycle.workouts).join(', ')}`);
+      
+      // Check if weekKey exists in the workouts object
+      if (!currentMesocycle.workouts[weekKey]) {
+        console.error(`Week ${weekKey} not found in mesocycle workouts`);
+        toast.error(`Week ${weekKey} not found in mesocycle`);
+        return;
+      }
+      
+      // Check if workouts array exists for the week
+      if (!Array.isArray(currentMesocycle.workouts[weekKey])) {
+        console.error(`Workouts for week ${weekKey} is not an array:`, currentMesocycle.workouts[weekKey]);
+        toast.error("Invalid workouts data structure");
+        return;
+      }
+      
+      // Log the available workout IDs for debugging
+      const availableWorkoutIds = currentMesocycle.workouts[weekKey].map(w => w.id);
+      console.log(`⭐ Available workout IDs in ${weekKey}: ${availableWorkoutIds.join(', ')}`);
+      
+      // The workout ID format is 'workout-w1-0-0'
+      // Parse the ID to find the workout index
+      const workoutIdParts = workout.id.split('-');
+      console.log(`⭐ Workout ID parts: ${workoutIdParts.join(', ')}`);
+      
+      const workoutIndex = currentMesocycle.workouts[weekKey].findIndex(w => w.id === workout.id);
+      console.log(`⭐ Found workout at index: ${workoutIndex}`);
+      
+      if (workoutIndex === -1) {
+        toast.error("Could not find workout to update");
+        return;
+      }
+      
+      // Create deep copy of the mesocycle to update
+      const updatedMesocycle = JSON.parse(JSON.stringify(currentMesocycle));
+      
+      // Add the exercise to the current workout
+      updatedMesocycle.workouts[weekKey][workoutIndex].exercises.push(exerciseToAdd);
+      
+      // If user wants to propagate to all weeks
+      if (newExercise.propagateToAllWeeks) {
+        // Loop through all weeks in the mesocycle
+        Object.keys(updatedMesocycle.workouts)
+          .filter(week => week !== weekKey) // Skip current week since we already added it
+          .forEach(otherWeekKey => {
+            // Check if the week has any workouts
+            if (!Array.isArray(updatedMesocycle.workouts[otherWeekKey]) || 
+                updatedMesocycle.workouts[otherWeekKey].length <= workoutIndex) {
+              console.log(`⭐ Skipping week ${otherWeekKey}: No matching workout index`);
+              return; // Skip this week
+            }
+            
+            // Find the corresponding workout in other weeks (same workout index)
+            const otherWorkout = updatedMesocycle.workouts[otherWeekKey][workoutIndex];
+            if (otherWorkout) {
+              // Create a variation of the exercise for this week
+              const otherWeekExerciseId = `exercise-${Date.now()}-${Math.floor(Math.random() * 1000)}-${otherWeekKey}`;
+              const otherWeekGeneratedSets = Array.from({ length: newExercise.sets }, (_, i) => ({
+                id: `${otherWeekExerciseId}-set-${i+1}`,
+                number: i + 1,
+                targetReps: newExercise.reps.toString(),
+                targetWeight: newExercise.weight || "",
+                completedReps: "",
+                completedWeight: ""
+              }));
+              
+              const otherWeekExercise = {
+                ...exerciseToAdd,
+                id: otherWeekExerciseId,
+                generatedSets: otherWeekGeneratedSets,
+                // Don't include sets array - it should be a number
+                sets: newExercise.sets,
+                baseExerciseId // Keep the same baseExerciseId to link exercises across weeks
+              };
+              
+              // Add to the corresponding workout
+              updatedMesocycle.workouts[otherWeekKey][workoutIndex].exercises.push(otherWeekExercise);
+              console.log(`⭐ Added exercise to week: ${otherWeekKey}`);
+            } else {
+              console.log(`⭐ Skipping week ${otherWeekKey}: No matching workout found`);
+            }
+          });
+      }
+      
+      // Create update record
+      const updates: Record<string, any> = {
+        workouts: updatedMesocycle.workouts
+      };
+      
+      // Update in Redux and Firestore
+      if (user) {
+        dispatch(updateMesocycleAsync({
+          id: currentMesocycle.id,
+          updates,
+          userId: user.uid
+        }) as any).then(() => {
+          toast.success(`${newExercise.name} added to ${newExercise.propagateToAllWeeks ? 'all weeks' : 'this workout'}`);
+          
+          // Reset the new exercise form
+          setNewExercise({
+            name: "",
+            sets: 3,
+            reps: 10,
+            weight: "",
+            muscleGroup: "other",
+            propagateToAllWeeks: true
+          });
+          
+          // Close the modal
+          setAddExerciseModalOpen(false);
+        }).catch((error: Error) => {
+          console.error("Error adding exercise:", error);
+          toast.error("Failed to add exercise. Please try again.");
+        });
+      } else {
+        // For offline mode
+        toast.success(`${newExercise.name} added to workout`);
+        setAddExerciseModalOpen(false);
+      }
+    } catch (error: unknown) {
+      console.error("Error in addCustomExercise:", error);
+      toast.error("An unexpected error occurred. Please try again.");
     }
   };
   
@@ -1793,9 +1992,15 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                   className="h-full bg-neon-green"
                   style={{ 
                     width: `${Math.round(
-                      (exercise.sets.filter((_: any, i: number) => 
+                        ((exercise.sets && Array.isArray(exercise.sets) && exercise.sets.length > 0)
+                          ? (exercise.sets.filter((_: any, i: number) => 
                         completedSets.has(`${exercise.id}-${exercise.sets[i].id}`)
-                      ).length / exercise.sets.length) * 100
+                            ).length / exercise.sets.length)
+                          : (exercise.generatedSets && Array.isArray(exercise.generatedSets) && exercise.generatedSets.length > 0)
+                            ? (exercise.generatedSets.filter((_: any, i: number) => 
+                                completedSets.has(`${exercise.id}-${exercise.generatedSets[i].id}`)
+                              ).length / exercise.generatedSets.length)
+                            : 0) * 100
                     )}%` 
                   }}
                 />
@@ -1878,14 +2083,14 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                       <button className="btn-secondary py-1 px-3 text-sm">
                         <Plus className="w-3 h-3 mr-1" /> Add Set
                       </button>
-                      <button 
-                        className="text-red-500 py-1 px-2 text-sm hover:bg-red-500/10 rounded"
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent the exercise from toggling expand/collapse
-                          setExerciseToDelete(exercise);
-                          setDeleteModalOpen(true);
-                        }}
-                      >
+                        <button 
+                          className="text-red-500 py-1 px-2 text-sm hover:bg-red-500/10 rounded"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent the exercise from toggling expand/collapse
+                            setExerciseToDelete(exercise);
+                            setDeleteModalOpen(true);
+                          }}
+                        >
                         <Trash className="w-3 h-3" />
                       </button>
                     </div>
@@ -1895,6 +2100,15 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
             )}
           </div>
         ))}
+          
+          {/* Add Exercise Button */}
+          <button
+            onClick={() => setAddExerciseModalOpen(true)}
+            className="w-full p-4 flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 rounded-lg border border-dashed border-gray-600"
+          >
+            <Plus className="w-5 h-5 text-neon-green" />
+            <span className="text-neon-green font-medium">Add Exercise</span>
+          </button>
       </div>
       
       {/* Action Buttons */}
@@ -2039,25 +2253,22 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
               <div className="flex flex-col gap-3 mt-2">
                 <button
                   className="bg-gray-800 hover:bg-gray-700 text-white font-medium px-4 py-3 rounded flex items-center"
-                  onClick={async () => {
+                  onClick={() => {
                     // Delete from current workout only
                     const exerciseIndex = exercises.findIndex(ex => ex.id === exerciseToDelete.id);
                     if (exerciseIndex !== -1) {
-                      setDeleteModalOpen(false); // Close modal first
-                      await deleteExercise(exerciseIndex);
-                      // Page will reload automatically from the deleteExercise function
-                    } else {
-                      setDeleteModalOpen(false);
-                      setExerciseToDelete(null);
-                      toast.error("Could not find exercise to delete");
+                      deleteExercise(exerciseIndex);
                     }
+                    setDeleteModalOpen(false);
+                    setExerciseToDelete(null);
+                    
+                    // Refresh the page after a short delay to allow the update to complete
+                    setTimeout(() => {
+                      // Code to refresh if needed
+                    }, 300);
                   }}
-                  disabled={isCompleting}
                 >
                   <span className="flex-1 text-left">This workout only</span>
-                  {isCompleting && (
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-r-transparent rounded-full ml-2"></div>
-                  )}
                 </button>
                 
                 <button
@@ -2095,6 +2306,140 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
               disabled={isCompleting}
             >
               Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
+      
+      {/* Add Exercise Modal */}
+      <Modal
+        isOpen={addExerciseModalOpen}
+        onClose={() => setAddExerciseModalOpen(false)}
+        title="Add Custom Exercise"
+      >
+        <div className="p-4">
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="exercise-name" className="block text-sm font-medium text-gray-300 mb-1">
+                Exercise Name
+              </label>
+              <input
+                id="exercise-name"
+                type="text"
+                placeholder="e.g., Dumbbell Curl"
+                value={newExercise.name}
+                onChange={(e) => setNewExercise({...newExercise, name: e.target.value})}
+                className="w-full bg-gray-800 rounded p-3 focus:ring-1 focus:ring-neon-green outline-none"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="muscle-group" className="block text-sm font-medium text-gray-300 mb-1">
+                Muscle Group
+              </label>
+              <select
+                id="muscle-group"
+                value={newExercise.muscleGroup}
+                onChange={(e) => setNewExercise({...newExercise, muscleGroup: e.target.value})}
+                className="w-full bg-gray-800 rounded p-3 focus:ring-1 focus:ring-neon-green outline-none"
+              >
+                <option value="chest">Chest</option>
+                <option value="back">Back</option>
+                <option value="shoulders">Shoulders</option>
+                <option value="legs">Legs</option>
+                <option value="arms">Arms</option>
+                <option value="core">Core</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label htmlFor="sets" className="block text-sm font-medium text-gray-300 mb-1">
+                  Sets
+                </label>
+                <input
+                  id="sets"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={newExercise.sets}
+                  onChange={(e) => setNewExercise({...newExercise, sets: parseInt(e.target.value) || 1})}
+                  className="w-full bg-gray-800 rounded p-3 focus:ring-1 focus:ring-neon-green outline-none"
+                />
+              </div>
+              
+              <div className="flex-1">
+                <label htmlFor="reps" className="block text-sm font-medium text-gray-300 mb-1">
+                  Reps
+                </label>
+                <input
+                  id="reps"
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={newExercise.reps}
+                  onChange={(e) => setNewExercise({...newExercise, reps: parseInt(e.target.value) || 1})}
+                  className="w-full bg-gray-800 rounded p-3 focus:ring-1 focus:ring-neon-green outline-none"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label htmlFor="weight" className="block text-sm font-medium text-gray-300 mb-1">
+                Starting Weight (optional)
+              </label>
+              <input
+                id="weight"
+                type="text"
+                placeholder="e.g., 25"
+                value={newExercise.weight}
+                onChange={(e) => setNewExercise({...newExercise, weight: e.target.value})}
+                className="w-full bg-gray-800 rounded p-3 focus:ring-1 focus:ring-neon-green outline-none"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                id="propagate"
+                type="checkbox"
+                checked={newExercise.propagateToAllWeeks}
+                onChange={(e) => setNewExercise({...newExercise, propagateToAllWeeks: e.target.checked})}
+                className="w-4 h-4 accent-neon-green"
+              />
+              <label htmlFor="propagate" className="text-sm text-gray-300">
+                Add this exercise to all weeks in this mesocycle
+              </label>
+            </div>
+            
+            {!newExercise.propagateToAllWeeks && (
+              <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3 mt-2">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="text-yellow-500 w-5 h-5 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-yellow-200">
+                      This exercise will only be added to the current workout, not future weeks.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              className="bg-gray-700 hover:bg-gray-600 text-white font-medium px-4 py-2 rounded"
+              onClick={() => setAddExerciseModalOpen(false)}
+            >
+              Cancel
+            </button>
+            
+            <button
+              className="bg-neon-green hover:bg-neon-green/90 text-black font-medium px-4 py-2 rounded flex items-center gap-2"
+              onClick={addCustomExercise}
+              disabled={!newExercise.name.trim()}
+            >
+              <Dumbbell className="w-4 h-4" /> Add Exercise
             </button>
           </div>
         </div>
