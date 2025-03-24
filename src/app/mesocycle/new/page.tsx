@@ -165,8 +165,9 @@ export default function CreateMesocyclePage() {
             
             // Create exercises for this workout
             const exercises = template.exercises.map((exerciseTemplate, exerciseIndex) => {
-              // Create a unique ID for this exercise
-              const exerciseId = `${workoutId}-e${exerciseIndex}`;
+              // Generate a consistent exercise ID across weeks
+              const baseExerciseId = exerciseTemplate.id;
+              const exerciseId = `${workoutId}-${baseExerciseId}`;
               
               // For the first week, create empty sets with just RPE targets
               // For later weeks, we'll use data from previous weeks
@@ -189,7 +190,16 @@ export default function CreateMesocyclePage() {
                 reps: exerciseTemplate.reps,
                 weight: "", // Empty for first week
                 notes: exerciseTemplate.notes || "",
-                generatedSets
+                generatedSets,
+                weightFeeling: "", // Initialize weight feeling feedback
+                baseExerciseId: baseExerciseId, // Store the consistent ID for tracking across weeks
+                feedback: {
+                  weightFeeling: "", // How the weight felt (too light, just right, too heavy, etc.)
+                  muscleActivation: "", // How well the target muscles were activated
+                  performanceRating: "", // Overall performance rating (1-5)
+                  notes: "", // Any specific notes about this exercise
+                  timestamp: "" // When the feedback was provided
+                }
               };
             });
             
@@ -217,8 +227,9 @@ export default function CreateMesocyclePage() {
             
             // Create exercises for this workout
             const exercises = template.exercises.map((exerciseTemplate, exerciseIndex) => {
-              // Create a unique ID for this exercise
-              const exerciseId = `${workoutId}-e${exerciseIndex}`;
+              // Generate a consistent exercise ID across weeks
+              const baseExerciseId = exerciseTemplate.id;
+              const exerciseId = `${workoutId}-${baseExerciseId}`;
               
               // For the first week, create empty sets with just RPE targets
               // For later weeks, we'll use data from previous weeks
@@ -241,7 +252,16 @@ export default function CreateMesocyclePage() {
                 reps: exerciseTemplate.reps,
                 weight: "", // Empty for first week
                 notes: exerciseTemplate.notes || "",
-                generatedSets
+                generatedSets,
+                weightFeeling: "", // Initialize weight feeling feedback
+                baseExerciseId: baseExerciseId, // Store the consistent ID for tracking across weeks
+                feedback: {
+                  weightFeeling: "", // How the weight felt (too light, just right, too heavy, etc.)
+                  muscleActivation: "", // How well the target muscles were activated
+                  performanceRating: "", // Overall performance rating (1-5)
+                  notes: "", // Any specific notes about this exercise
+                  timestamp: "" // When the feedback was provided
+                }
               };
             });
             
@@ -296,7 +316,7 @@ export default function CreateMesocyclePage() {
         exercisesForGroup.slice(0, 2).forEach((exercise) => {
           console.log('Adding exercise:', exercise);
           exercises.push({
-            id: exercise.id,
+            id: `${exercise.id}-${muscleGroup}`, // Create a consistent ID based on exercise and muscle group
             name: exercise.name,
             muscleGroup: muscleGroup,
             sets: exercise.targetSets,

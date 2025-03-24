@@ -19,6 +19,7 @@ export interface ExerciseInstance {
   targetRIR: number;
   sets: Set[];
   notes: string;
+  weightFeeling?: string; // Feedback on how the weight felt during exercise
 }
 
 export interface WorkoutSession {

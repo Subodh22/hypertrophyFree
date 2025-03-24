@@ -107,6 +107,23 @@ export default function WorkoutCard({ workout, compact = false }: WorkoutCardPro
                     </div>
                   ))}
                 </div>
+                
+                {exercise.weightFeeling && (
+                  <div className="mt-2 pt-2 border-t border-gray-800/50">
+                    <span className="text-xs text-gray-400">Weight feedback: </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      exercise.weightFeeling === 'too_light' ? 'bg-blue-900/50 text-blue-400' :
+                      exercise.weightFeeling === 'just_right' ? 'bg-green-900/50 text-neon-green' :
+                      exercise.weightFeeling === 'too_heavy' ? 'bg-orange-900/50 text-orange-400' :
+                      'bg-red-900/50 text-red-400'
+                    }`}>
+                      {exercise.weightFeeling === 'too_light' && 'Too Light'}
+                      {exercise.weightFeeling === 'just_right' && 'Just Right'}
+                      {exercise.weightFeeling === 'too_heavy' && 'Too Heavy'}
+                      {exercise.weightFeeling === 'extremely_heavy' && 'Extremely Heavy'}
+                    </span>
+                  </div>
+                )}
               </div>
             ))}
           </div>

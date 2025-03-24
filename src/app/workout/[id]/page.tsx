@@ -1,17 +1,35 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSelector, useDispatch } from 'react-redux';
+import { useAuth } from '@/lib/hooks/useAuth';
 import { RootState } from '@/lib/store';
-import { ArrowLeft, CheckCircle, Circle, Dumbbell, Clock, Plus, Trash, Save, X, ThumbsUp, ThumbsDown, Info } from 'lucide-react';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/firebase';
+import { 
+  ArrowLeft, 
+  Check, 
+  CheckCircle, 
+  Copy, 
+  Timer, 
+  ThumbsUp, 
+  ThumbsDown, 
+  Save, 
+  Clock, 
+  X, 
+  Info, 
+  Circle, 
+  Plus, 
+  Trash 
+} from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { Modal } from "@/components/ui/Modal";
 import Link from 'next/link';
 import { format } from 'date-fns';
 import LoadingScreen from '@/components/LoadingScreen';
 import { updateWorkoutProgress } from '@/lib/slices/workoutSlice';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/firebase';
+import WeightFeelingSurvey from '@/components/WeightFeelingSurvey';
 
 export default function WorkoutDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -36,6 +54,15 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
     notes: "",
   });
   
+  // Weight feeling survey state
+  const [weightSurveyOpen, setWeightSurveyOpen] = useState(false);
+  const [surveyExercise, setSurveyExercise] = useState<any>(null);
+  const [surveyShownForExercise, setSurveyShownForExercise] = useState<{[key: string]: boolean}>({});
+  
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [suggestionModalOpen, setSuggestionModalOpen] = useState(false);
+  const [weightSuggestions, setWeightSuggestions] = useState<Record<string, { weight: number, reps: number, sets: number, exerciseName: string, exerciseId: string }>>({});
+  
   // Find workout details from mesocycle
   useEffect(() => {
     if (currentMesocycle) {
@@ -56,8 +83,16 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
         
         // Prepare exercises with their sets
         const exerciseList = foundWorkout.exercises.map((exercise: any) => {
-          // Use generated sets if available, otherwise create them
-          const sets = exercise.generatedSets || Array.from({ length: exercise.sets }, (_, i) => ({
+          // Use generatedSets if available, otherwise create them
+          let generatedSets = [];
+          
+          if (exercise.generatedSets && Array.isArray(exercise.generatedSets)) {
+            // Use existing generatedSets
+            generatedSets = exercise.generatedSets;
+            console.log(`⭐ Found ${generatedSets.length} existing generatedSets for ${exercise.name}`);
+          } else {
+            // Create new generatedSets
+            generatedSets = Array.from({ length: parseInt(exercise.sets) || 3 }, (_, i) => ({
             id: `${exercise.id}-set-${i+1}`,
             number: i + 1,
             targetReps: exercise.reps,
@@ -65,10 +100,26 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
             completedReps: "",
             completedWeight: "",
           }));
+            console.log(`⭐ Created ${generatedSets.length} new generatedSets for ${exercise.name}`);
+          }
+          
+          // Update completedSets state with any already completed sets
+          generatedSets.forEach((set: any, index: number) => {
+            if (set.completedWeight && set.completedReps) {
+              // This set has completion data, mark it as completed
+              const uniqueId = `${exercise.id}-${set.id}`;
+              setCompletedSets(prev => {
+                const newSet = new Set(prev);
+                newSet.add(uniqueId);
+                return newSet;
+              });
+              console.log(`⭐ Found completed set: ${exercise.name} set #${index+1}`);
+            }
+          });
           
           return {
             ...exercise,
-            sets,
+            sets: generatedSets
           };
         });
         
@@ -83,10 +134,18 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
               foundWorkout = { ...found, weekNum };
               setWorkout(foundWorkout);
               
-              // Prepare exercises with their sets
+              // Prepare exercises with their sets - same logic as above
               const exerciseList = foundWorkout.exercises.map((exercise: any) => {
-                // Use generated sets if available, otherwise create them
-                const sets = exercise.generatedSets || Array.from({ length: exercise.sets }, (_, i) => ({
+                // Use generatedSets if available, otherwise create them
+                let generatedSets = [];
+                
+                if (exercise.generatedSets && Array.isArray(exercise.generatedSets)) {
+                  // Use existing generatedSets
+                  generatedSets = exercise.generatedSets;
+                  console.log(`⭐ Found ${generatedSets.length} existing generatedSets for ${exercise.name}`);
+                } else {
+                  // Create new generatedSets
+                  generatedSets = Array.from({ length: parseInt(exercise.sets) || 3 }, (_, i) => ({
                   id: `${exercise.id}-set-${i+1}`,
                   number: i + 1,
                   targetReps: exercise.reps,
@@ -94,10 +153,26 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                   completedReps: "",
                   completedWeight: "",
                 }));
+                  console.log(`⭐ Created ${generatedSets.length} new generatedSets for ${exercise.name}`);
+                }
+                
+                // Update completedSets state with any already completed sets
+                generatedSets.forEach((set: any, index: number) => {
+                  if (set.completedWeight && set.completedReps) {
+                    // This set has completion data, mark it as completed
+                    const uniqueId = `${exercise.id}-${set.id}`;
+                    setCompletedSets(prev => {
+                      const newSet = new Set(prev);
+                      newSet.add(uniqueId);
+                      return newSet;
+                    });
+                    console.log(`⭐ Found completed set: ${exercise.name} set #${index+1}`);
+                  }
+                });
                 
                 return {
                   ...exercise,
-                  sets,
+                  sets: generatedSets
                 };
               });
               
@@ -145,8 +220,11 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
     const newCompletedSets = new Set(completedSets);
     
     if (newCompletedSets.has(uniqueId)) {
+      // If we're unchecking a set
       newCompletedSets.delete(uniqueId);
+      setCompletedSets(newCompletedSets);
     } else {
+      // If we're checking a set (marking it as completed)
       newCompletedSets.add(uniqueId);
       
       // Find the exercise and set in our data
@@ -220,39 +298,64 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                 // Get the exercise to update
                 const exerciseDoc = data.workouts[weekKey][workoutIndex].exercises[exerciseDocIndex];
                 
-                // Initialize generatedSets if needed
-                if (!exerciseDoc.generatedSets) {
-                  exerciseDoc.generatedSets = [];
-                  for (let i = 0; i < exercise.sets.length; i++) {
-                    exerciseDoc.generatedSets.push({
+                // Find or initialize the generatedSets array
+                if (!exerciseDoc.generatedSets || !Array.isArray(exerciseDoc.generatedSets)) {
+                  console.log("⭐ Creating generatedSets array for exercise", exerciseDoc.name);
+                  exerciseDoc.generatedSets = Array.from({ length: exercise.sets.length }, (_, i) => ({
                       id: `${exerciseDoc.id}-set-${i+1}`,
                       number: i + 1,
                       targetReps: exerciseDoc.reps,
                       targetWeight: exerciseDoc.weight || "",
                       completedReps: "",
                       completedWeight: ""
-                    });
-                  }
+                  }));
                 }
                 
-                // Update ONLY the specific set
-                if (Array.isArray(exerciseDoc.generatedSets) && 
-                    exerciseDoc.generatedSets.length > setIndex && 
-                    exerciseDoc.generatedSets[setIndex]) {
-                  
-                  // Update the specific set
+                // Make sure the generatedSets array is long enough
+                while (exerciseDoc.generatedSets.length <= setIndex) {
+                  const newSetIndex = exerciseDoc.generatedSets.length;
+                  exerciseDoc.generatedSets.push({
+                    id: `${exerciseDoc.id}-set-${newSetIndex+1}`,
+                    number: newSetIndex + 1,
+                      targetReps: exerciseDoc.reps,
+                      targetWeight: exerciseDoc.weight || "",
+                      completedReps: "",
+                      completedWeight: ""
+                    });
+                }
+                
+                // Update the specific set's completedWeight and completedReps
+                if (setIndex >= 0 && setIndex < exerciseDoc.generatedSets.length) {
                   exerciseDoc.generatedSets[setIndex].completedWeight = weight;
                   exerciseDoc.generatedSets[setIndex].completedReps = reps;
                   
-                  console.log("⭐ Updated specific set:", {
+                  console.log("⭐ Updated set data in generatedSets:", {
+                    exerciseName: exerciseDoc.name,
                     setIndex,
                     weight, 
-                    reps,
-                    setData: exerciseDoc.generatedSets[setIndex]
+                    reps
                   });
+                } else {
+                  console.error("Set index out of bounds", {
+                    setIndex,
+                    generatedSetsLength: exerciseDoc.generatedSets.length
+                  });
+                  return;
+                }
                   
                   // Mark exercise as completed if any set is completed
                   exerciseDoc.completed = true;
+                
+                // Initialize feedback object if it doesn't exist
+                if (!exerciseDoc.feedback) {
+                  exerciseDoc.feedback = {
+                    weightFeeling: "",
+                    muscleActivation: "",
+                    performanceRating: "",
+                    notes: "",
+                    timestamp: ""
+                  };
+                }
                   
                   // Update document with set-specific changes
                   console.log("⭐ Updating exercise with set-specific data:", exerciseDoc.name);
@@ -261,16 +364,62 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                     updatedAt: new Date().toISOString()
                   }).then(() => {
                     console.log("⭐ Successfully updated specific set in Firebase");
-                  }).catch(error => {
-                    console.error("⭐ Error updating set in Firebase:", error);
-                  });
+                  
+                  // Update completedSets with this new set
+                  setCompletedSets(prev => {
+                    // Create a new set with all previous values
+                    const updatedCompletedSets = new Set(prev);
+                    // Add the new unique ID
+                    updatedCompletedSets.add(uniqueId);
+                    
+                    // Now check if all sets for this exercise are completed
+                    const allSetsCompleted = exercise.sets.every((s: any) => 
+                      updatedCompletedSets.has(`${exerciseId}-${s.id}`)
+                    );
+                    
+                    console.log(`⭐ After adding ${uniqueId}, all sets completed: ${allSetsCompleted}`);
+                    
+                    // If all sets are now completed, show the survey
+                    if (allSetsCompleted && weekKey && currentMesocycle) {
+                      console.log(`⭐ All sets completed for ${exercise.name}, showing weight feeling survey!`);
+                      
+                      // Create a unique state key for this exercise
+                      const stateKey = `${workout.id}-${exerciseId}`;
+                      
+                      // Check if we've already shown the survey for this exercise
+                      if (!surveyShownForExercise[stateKey]) {
+                        // Mark this exercise as having shown the survey
+                        setSurveyShownForExercise(prev => ({
+                          ...prev,
+                          [stateKey]: true
+                        }));
+                        
+                        // Prepare survey data
+                        setSurveyExercise({
+                          mesocycleId: currentMesocycle.id,
+                          weekKey,
+                          workoutIndex,
+                          exerciseIndex: exerciseDocIndex,
+                          exerciseName: exercise.name,
+                          stateKey,
+                          isAutoPopup: true
+                        });
+                        
+                        // Open the survey with a slight delay to ensure state updates first
+                        setTimeout(() => {
+                          setWeightSurveyOpen(true);
+                        }, 300);
                 } else {
-                  console.error("Generated sets not properly initialized or set index out of bounds", {
-                    hasGeneratedSets: !!exerciseDoc.generatedSets,
-                    generatedSetsLength: exerciseDoc.generatedSets?.length,
-                    setIndex
+                        console.log(`⭐ Survey already shown for ${exercise.name}, not showing again`);
+                      }
+                    }
+                    
+                    return updatedCompletedSets;
                   });
-                }
+                  
+                }).catch(error => {
+                  console.error("⭐ Error updating set in Firebase:", error);
+                });
               }).catch(error => {
                 console.error("Error getting mesocycle document:", error);
               });
@@ -279,16 +428,80 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                 weekKey, workoutIndex, exerciseDocIndex
               });
             }
+          } else {
+            // If we don't have weight/reps data but we're still marking the set as completed
+            setCompletedSets(newCompletedSets);
           }
+        } else {
+          // Set not found, just update the state
+          setCompletedSets(newCompletedSets);
         }
+      } else {
+        // Exercise not found, just update the state
+        setCompletedSets(newCompletedSets);
       }
       
       // Start rest timer when a set is completed
       setTimer(initialTimer);
       setTimerActive(true);
     }
+  };
+  
+  // Check if all sets for an exercise are completed and show the weight feeling survey
+  const checkAndShowWeightSurvey = (exerciseId: string, exercise: any, weekKey: string, workoutIndex: number, exerciseIndex: number) => {
+    // Skip if no mesocycle or workout or if we've already shown the survey for this exercise
+    if (!currentMesocycle || !workout) {
+      console.log("⭐ Cannot show survey: missing mesocycle or workout");
+      return;
+    }
     
-    setCompletedSets(newCompletedSets);
+    const stateKey = `${workout.id}-${exerciseId}`;
+    if (surveyShownForExercise[stateKey]) {
+      console.log(`⭐ Survey already shown for ${exercise.name}, skipping`);
+      return;
+    }
+    
+    // Count completed sets for this exercise
+    let completedSetsCount = 0;
+    const totalSets = exercise.sets.length;
+    
+    exercise.sets.forEach((set: any) => {
+      const setKey = `${exerciseId}-${set.id}`;
+      if (completedSets.has(setKey)) {
+        completedSetsCount++;
+      }
+    });
+    
+    console.log(`⭐ Exercise: ${exercise.name}, Completed sets: ${completedSetsCount}/${totalSets}`);
+    
+    // If all sets are completed, show the survey
+    if (completedSetsCount === totalSets) {
+      console.log(`⭐ All ${totalSets} sets completed for ${exercise.name}, showing weight feeling survey`);
+      
+      // Mark this exercise as having shown the survey
+      setSurveyShownForExercise(prev => ({
+        ...prev,
+        [stateKey]: true
+      }));
+      
+      // Prepare survey data - using mesocycleId from the non-null currentMesocycle
+      const mesocycleId = currentMesocycle.id; // Safe to use here because of the null check above
+      
+      setSurveyExercise({
+        mesocycleId,
+        weekKey,
+        workoutIndex,
+        exerciseIndex,
+        exerciseName: exercise.name,
+        stateKey,
+        isAutoPopup: true
+      });
+      
+      // Open the survey
+      setWeightSurveyOpen(true);
+    } else {
+      console.log(`⭐ Not all sets completed for ${exercise.name} (${completedSetsCount}/${totalSets}), not showing survey yet`);
+    }
   };
   
   // Handle updating set details
@@ -394,460 +607,835 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
     return suggestions;
   };
   
-  // Update next week's workout with suggested weights
-  const updateNextWeekWorkout = async (suggestions: Record<string, { weight: number, reps: number, sets: number }>) => {
-    if (!currentMesocycle || !workout || !user) {
-      console.log("Cannot update next week: missing mesocycle, workout, or user");
-      return;
-    }
-    
-    // Extract numeric week number from workout
-    let currentWeek = 1;
+  // Helper function to update exercise and its generatedSets with suggestion
+  const updateExerciseWithSuggestion = (
+    exercise: any, 
+    suggestion: { weight: number, reps: number, sets: number, exerciseName: string, exerciseId: string }
+  ): boolean => {
     try {
-      if (workout.weekNum) {
-        // Remove any non-numeric characters (like "week" in "week1")
-        const numericPart = workout.weekNum.toString().replace(/\D/g, '');
-        currentWeek = parseInt(numericPart);
-      } else if (workout.id && workout.id.includes('w')) {
-        // Try to extract from ID (e.g., workout-w1-0-0)
-        const match = workout.id.match(/w(\d+)/);
-        if (match && match[1]) {
-          currentWeek = parseInt(match[1]);
-        }
+      const suggestedWeight = suggestion.weight;
+      const suggestedReps = suggestion.reps;
+      
+      // Log the values we're about to apply
+      console.log(`⭐ UpdateExerciseWithSuggestion DETAILS:`, {
+        exerciseName: exercise.name,
+        exerciseId: exercise.id,
+        fromExerciseName: suggestion.exerciseName,
+        fromExerciseId: suggestion.exerciseId,
+        rawSuggestedWeight: suggestedWeight,
+        suggestedWeightString: suggestedWeight.toString(),
+        suggestedReps,
+        suggestedSets: suggestion.sets,
+        hasGeneratedSets: Boolean(exercise.generatedSets)
+      });
+      
+      // Validate the suggestion weight - ensure it's a reasonable value (greater than 0)
+      if (!suggestedWeight || suggestedWeight <= 0) {
+        console.log(`⭐ Invalid suggested weight (${suggestedWeight}) for exercise ${exercise.name}, cannot update`);
+        return false;
       }
       
-      if (isNaN(currentWeek)) {
-        console.log("⭐ Week number parsed as NaN, defaulting to 1");
-        currentWeek = 1;
-      }
-    } catch (e) {
-      console.error("Could not determine current week number:", e);
-      currentWeek = 1;
-    }
-    
-    const nextWeek = currentWeek + 1;
-    console.log(`⭐ Current week: ${currentWeek}, Next week: ${nextWeek}`);
-    
-    // Check if we're already at the last week
-    if (nextWeek > currentMesocycle.weeks) {
-      console.log(`⭐ Already at the last week of mesocycle (${currentMesocycle.weeks}), no next week to update`);
-      return;
-    }
-    
-    console.log("⭐ Updating next week's workout with suggestions", suggestions);
-    
-    try {
-      // Current week key and next week key - ENSURE week format matches your database
-      let nextWeekKey = `week${nextWeek}`;
-      
-      console.log(`⭐ Looking for workouts in ${nextWeekKey}`);
-      
-      // Find workout in next week with the same exercises (day of week)
-      const dayOfWeek = new Date(workout.date).getDay(); // 0-6, Sunday-Saturday
-      
-      // Get mesocycle document
-      const docRef = doc(db, 'mesocycles', currentMesocycle.id);
-      const docSnap = await getDoc(docRef);
-      
-      if (!docSnap.exists()) {
-        console.error("Mesocycle not found");
-        return;
+      // Convert to string with up to 2 decimal places for display
+      let weightString = "";
+      if (Math.floor(suggestedWeight) === suggestedWeight) {
+        // It's a whole number, no decimal places needed
+        weightString = Math.floor(suggestedWeight).toString();
+      } else {
+        // Has decimal places, format with up to 2 decimal places
+        weightString = suggestedWeight.toFixed(2).replace(/\.?0+$/, '');
       }
       
-      const data = docSnap.data();
+      const repsString = suggestedReps.toString();
       
-      // Log available week keys to help with debugging
-      if (data.workouts) {
-        const availableWeeks = Object.keys(data.workouts);
-        console.log("⭐ Available weeks in mesocycle:", availableWeeks);
+      // Update the generatedSets with new target weights and reps
+      if (exercise.generatedSets && Array.isArray(exercise.generatedSets)) {
+        console.log(`⭐ Updating ${exercise.generatedSets.length} generatedSets for ${exercise.name}`);
         
-        // If the exact nextWeekKey isn't found, try to find one that corresponds to the next week
-        if (!data.workouts[nextWeekKey]) {
-          console.log(`⭐ Exact key ${nextWeekKey} not found, looking for alternatives...`);
+        // Loop through each set and update the target weight
+        exercise.generatedSets.forEach((set: any, index: number) => {
+          const originalWeight = set.targetWeight;
+          const originalReps = set.targetReps;
           
-          // Try alternative formats: week1, Week1, 1, etc.
-          const alternativeKeys = [
-            `week${nextWeek}`, 
-            `Week${nextWeek}`, 
-            `${nextWeek}`,
-            `w${nextWeek}`
-          ];
+          // Update target weight and reps
+          set.targetWeight = weightString;
+          set.targetReps = repsString;
           
-          // Also look for keys that might contain the next week number
-          for (const key of availableWeeks) {
-            if (key.includes(nextWeek.toString())) {
-              alternativeKeys.push(key);
-            }
+          console.log(`⭐ [Set ${index + 1}] Updated for ${exercise.name}: target weight: ${originalWeight} → ${set.targetWeight}, target reps: ${originalReps} → ${set.targetReps}`);
+        });
+        
+        // If we need more sets than current, add them
+        if (exercise.generatedSets.length < suggestion.sets) {
+          const setsToAdd = suggestion.sets - exercise.generatedSets.length;
+          console.log(`⭐ Adding ${setsToAdd} more sets to match suggestion`);
+          
+          for (let i = 0; i < setsToAdd; i++) {
+            const newSet = {
+              id: `set-${Date.now()}-${i}`,
+              targetWeight: weightString,
+              targetReps: repsString,
+              completedWeight: "",
+              completedReps: ""
+            };
+            
+            exercise.generatedSets.push(newSet);
+            console.log(`⭐ Added new set with target weight ${weightString} and reps ${repsString}`);
           }
+        }
+      } else {
+        // No generated sets exist, create them
+        console.log(`⭐ Creating new generatedSets for ${exercise.name}`);
+        
+        exercise.generatedSets = [];
+        
+        for (let i = 0; i < suggestion.sets; i++) {
+          const newSet = {
+            id: `set-${Date.now()}-${i}`,
+            targetWeight: weightString,
+            targetReps: repsString,
+            completedWeight: "",
+            completedReps: ""
+          };
           
-          // Try each alternative key
-          for (const altKey of alternativeKeys) {
-            if (data.workouts[altKey]) {
-              console.log(`⭐ Found alternative key: ${altKey}`);
-              // Use this key instead
-              nextWeekKey = altKey;
+          exercise.generatedSets.push(newSet);
+        }
+        
+        console.log(`⭐ Created ${suggestion.sets} new sets with target weight ${weightString} and reps ${repsString}`);
+      }
+      
+      // Also update the exercise-level weight and reps to match
+      const oldWeight = exercise.weight;
+      const oldReps = exercise.reps;
+      
+      exercise.weight = weightString;
+      exercise.reps = repsString;
+      
+      console.log(`⭐ Updated exercise-level data for ${exercise.name}: weight ${oldWeight} → ${exercise.weight}, reps ${oldReps} → ${exercise.reps}`);
+      
+      return true;
+    } catch (error) {
+      console.error("Error updating exercise with suggestion:", error);
+      return false;
+    }
+  };
+  
+  // Update next week's workout with suggested weights
+  const updateNextWeekWorkout = async (suggestions: Record<string, { weight: number, reps: number, sets: number, exerciseName: string, exerciseId: string }>) => {
+    if (!user || !currentMesocycle) {
+      console.error("Cannot update next week's workout: missing user or mesocycle data");
+      return;
+    }
+    
+    try {
+      console.log("⭐ Updating next week's workout with suggestions:", suggestions);
+      console.log("⭐ Suggestion keys available:", Object.keys(suggestions));
+      console.log("⭐ Suggestion values:", Object.values(suggestions).map(s => `${s.exerciseName}: ${s.weight}kg x ${s.reps} reps`));
+      
+      // Reference to mesocycle document
+      const mesocycleRef = doc(db, 'mesocycles', currentMesocycle.id);
+      
+      // Get the current mesocycle data
+      const mesocycleSnap = await getDoc(mesocycleRef);
+      if (!mesocycleSnap.exists()) {
+        throw new Error("Mesocycle document not found");
+      }
+      
+      const mesocycleData = mesocycleSnap.data();
+      const workouts = mesocycleData.workouts || {};
+      
+      // Get the current week and workout info
+      const weekMatch = workout?.id.match(/workout-w(\d+)-(\d+)-(\d+)/);
+      if (!weekMatch) {
+        throw new Error(`Cannot parse week from workout ID: ${workout?.id}`);
+      }
+      
+      console.log(`⭐ Current workout ID: ${workout?.id}`);
+      
+      // Extract current week number and workout info
+      const currentWeekNum = parseInt(weekMatch[1]);
+      const currentDayIndex = parseInt(weekMatch[2]); 
+      const currentSessionIndex = parseInt(weekMatch[3]);
+      
+      // Calculate next week number
+      const nextWeekNum = currentWeekNum + 1;
+      const nextWeekKey = `week${nextWeekNum}`;
+      
+      console.log(`⭐ Current week: ${currentWeekNum}, Next week: ${nextWeekNum}, Looking for: ${nextWeekKey}`);
+      
+      // Check if next week exists
+      if (!workouts[nextWeekKey]) {
+        throw new Error(`Next week (${nextWeekKey}) not found in mesocycle`);
+      }
+      
+      // Find the corresponding workout in the next week (same day and session index)
+      const nextWeekWorkouts = workouts[nextWeekKey];
+      
+      // First try to find the workout with the same day and session index
+      let nextWorkoutIndex = nextWeekWorkouts.findIndex((w: any) => {
+        const nextIdMatch = w.id.match(/workout-w\d+-(\d+)-(\d+)/);
+        return nextIdMatch && 
+               parseInt(nextIdMatch[1]) === currentDayIndex && 
+               parseInt(nextIdMatch[2]) === currentSessionIndex;
+      });
+      
+      // If not found, fall back to position-based matching (first workout)
+      if (nextWorkoutIndex === -1) {
+        console.log(`⭐ Could not find matching workout in next week, using first available`);
+        nextWorkoutIndex = 0;
+      }
+      
+      if (nextWorkoutIndex === -1 || !nextWeekWorkouts[nextWorkoutIndex]) {
+        throw new Error(`No workout found in next week (${nextWeekKey})`);
+      }
+      
+      const nextWorkout = nextWeekWorkouts[nextWorkoutIndex];
+      console.log(`⭐ Found next week's workout: ${nextWorkout.id}`);
+      
+      // Create a working copy of the next week's workouts
+      const updatedNextWeekWorkouts = JSON.parse(JSON.stringify(nextWeekWorkouts));
+      const updatedNextWorkout = updatedNextWeekWorkouts[nextWorkoutIndex];
+      
+      // Track which exercises were updated
+      const updatedExercises: string[] = [];
+      
+      // Create a map to track which exercises have been matched with which suggestion
+      // This helps prevent using the same suggestion for multiple exercises
+      const usedSuggestions = new Set<string>();
+      
+      // First, let's log the current exercises from this week's workout for reference
+      console.log("⭐ CURRENT WEEK EXERCISES:");
+      exercises.forEach((ex: any, idx: number) => {
+        console.log(`${idx+1}. ${ex.name} (baseExerciseId: ${ex.baseExerciseId || 'not set'})`);
+      });
+      
+      // Now log the next week's exercises
+      console.log("⭐ NEXT WEEK EXERCISES:");
+      updatedNextWorkout.exercises.forEach((ex: any, idx: number) => {
+        console.log(`${idx+1}. ${ex.name} (baseExerciseId: ${ex.baseExerciseId || 'not set'})`);
+      });
+      
+      // Go through each exercise in the next week's workout and find matches
+      for (let i = 0; i < updatedNextWorkout.exercises.length; i++) {
+        const exercise = updatedNextWorkout.exercises[i];
+        let found = false;
+        let matchInfo = '';
+        let suggestion = null;
+        let suggestionKey = '';
+        
+        console.log(`⭐ Checking exercise ${exercise.name} (baseExerciseId: ${exercise.baseExerciseId || 'not set'})`);
+        
+        // Try different matching strategies - prioritize exact baseExerciseId matches
+        
+        // 0. First try to find a suggestion with matching exerciseId (highest priority)
+        if (!found) {
+          // Look for suggestions with explicit "from this exercise ID" mapping
+          for (const [key, sugg] of Object.entries(suggestions)) {
+            if (usedSuggestions.has(key)) continue; // Skip already used suggestions
+            
+            // Check if this suggestion contains the original exercise's ID
+            if (sugg.exerciseId) {
+              console.log(`⭐ Checking suggestion with exerciseId=${sugg.exerciseId} against exercise ${exercise.name}`);
+              
+              // Direct match by ID (best case)
+              const suggestionExerciseId = sugg.exerciseId;
+              if (suggestionExerciseId === exercise.id || 
+                  (exercise.baseExerciseId && suggestionExerciseId === exercise.baseExerciseId)) {
+                suggestionKey = key;
+                suggestion = sugg;
+                matchInfo = `direct exercise ID match: ${suggestionExerciseId}`;
+                console.log(`⭐ DIRECT MATCH FOUND by exerciseId: ${suggestionExerciseId}`);
+                found = true;
               break;
             }
           }
         }
       }
       
-      // Check if next week exists (with updated nextWeekKey if necessary)
-      if (!data.workouts || !data.workouts[nextWeekKey]) {
-        console.error(`Next week (${nextWeekKey}) not found in mesocycle`);
+        // 1. Direct match by baseExerciseId
+        if (!found && exercise.baseExerciseId && suggestions[exercise.baseExerciseId] && !usedSuggestions.has(exercise.baseExerciseId)) {
+          suggestionKey = exercise.baseExerciseId;
+          suggestion = suggestions[suggestionKey];
+          matchInfo = `direct baseExerciseId match: ${exercise.baseExerciseId}`;
+          found = true;
+        }
         
-        // Try to find any future week instead
-        const availableWeeks = Object.keys(data.workouts);
-        console.log("⭐ Looking for any future week as a fallback");
+        // 2. Normalized baseExerciseId match (lowercase, trimmed)
+        if (!found && exercise.baseExerciseId) {
+          const normalizedId = exercise.baseExerciseId.toLowerCase().trim();
+          if (suggestions[normalizedId] && !usedSuggestions.has(normalizedId)) {
+            suggestionKey = normalizedId;
+            suggestion = suggestions[suggestionKey];
+            matchInfo = `normalized baseExerciseId match: ${normalizedId}`;
+            found = true;
+          }
+        }
         
-        // Extract numeric parts from week keys
-        const weekNumbers = availableWeeks.map(key => {
-          const numericPart = key.replace(/\D/g, '');
-          return parseInt(numericPart);
-        }).filter(num => !isNaN(num) && num > currentWeek);
+        // 3. Try to match with current week exercises by comparing names
+        if (!found && exercises && exercises.length > 0) {
+          // Find a matching exercise from this week with the same name
+          for (const currExercise of exercises) {
+            if (currExercise.id && suggestions[currExercise.id] && !usedSuggestions.has(currExercise.id) && 
+                (currExercise.name.toLowerCase() === exercise.name.toLowerCase() ||
+                 currExercise.name.toLowerCase().includes(exercise.name.toLowerCase()) ||
+                 exercise.name.toLowerCase().includes(currExercise.name.toLowerCase()))) {
+              suggestionKey = currExercise.id;
+              suggestion = suggestions[suggestionKey];
+              matchInfo = `current week exercise ID match: ${currExercise.id} via name similarity`;
+              found = true;
+              break;
+            }
+          }
+        }
         
-        if (weekNumbers.length > 0) {
-          // Get the smallest week number that's greater than current week
-          const nextAvailableWeek = Math.min(...weekNumbers);
-          const nextAvailableWeekKey = availableWeeks.find(key => key.includes(nextAvailableWeek.toString()));
+        // 4. Exact exercise name match
+        if (!found) {
+          const exactNameKey = exercise.name;
+          if (suggestions[exactNameKey] && !usedSuggestions.has(exactNameKey)) {
+            suggestionKey = exactNameKey;
+            suggestion = suggestions[suggestionKey];
+            matchInfo = `exact name match: ${exercise.name}`;
+            found = true;
+          }
+        }
+        
+        // 5. Lowercase exercise name match
+        if (!found) {
+          const lowerNameKey = exercise.name.toLowerCase();
+          if (suggestions[lowerNameKey] && !usedSuggestions.has(lowerNameKey)) {
+            suggestionKey = lowerNameKey;
+            suggestion = suggestions[suggestionKey];
+            matchInfo = `lowercase name match: ${lowerNameKey}`;
+            found = true;
+          }
+        }
+        
+        // 6. Fuzzy match by exercise name similarity
+        if (!found) {
+          // Compare with each suggestion exerciseName
+          for (const [key, sugg] of Object.entries(suggestions)) {
+            if (usedSuggestions.has(key)) continue; // Skip already used suggestions
+            
+            const suggestionName = sugg.exerciseName.toLowerCase();
+            const exerciseName = exercise.name.toLowerCase();
+            
+            // Check if names are similar (one contains the other or they share significant words)
+            if (suggestionName.includes(exerciseName) || 
+                exerciseName.includes(suggestionName) || 
+                (suggestionName.split(' ').some((word: string) => word.length > 3 && exerciseName.includes(word)) && 
+                 exerciseName.split(' ').some((word: string) => word.length > 3 && suggestionName.includes(word)))) {
+              
+              suggestionKey = key;
+              suggestion = sugg;
+              matchInfo = `fuzzy name match: "${suggestionName}" ~ "${exerciseName}"`;
+              found = true;
+              break;
+            }
+          }
+        }
+        
+        // 7. Fallback to position-based matching as a last resort
+        if (!found) {
+          // Try to match with same index exercise from current workout
+          if (exercises && exercises.length > i) {
+            const currExercise = exercises[i];
+            if (currExercise.id && suggestions[currExercise.id] && !usedSuggestions.has(currExercise.id)) {
+              suggestionKey = currExercise.id;
+              suggestion = suggestions[suggestionKey];
+              matchInfo = `position-based match (index ${i}) from current workout`;
+              found = true;
+            }
+          }
           
-          if (nextAvailableWeekKey) {
-            console.log(`⭐ Found future week ${nextAvailableWeekKey} to use instead`);
-            nextWeekKey = nextAvailableWeekKey;
-          } else {
-            return;
+          // If still not found, try any unused suggestion
+          if (!found) {
+            for (const [key, sugg] of Object.entries(suggestions)) {
+              if (!usedSuggestions.has(key)) {
+                suggestionKey = key;
+                suggestion = sugg;
+                matchInfo = `last resort - any unused suggestion`;
+                found = true;
+                break;
+              }
+            }
+          }
+        }
+        
+        // Apply the suggestion if found
+        if (found && suggestion) {
+          console.log(`⭐ Found match for exercise: "${exercise.name}" (${exercise.id || 'no ID'})`);
+          console.log(`⭐ Using suggestion from: "${suggestion.exerciseName}" (${suggestion.exerciseId || 'no ID'})`);
+          console.log(`⭐ Values to apply: ${suggestion.weight}kg x ${suggestion.reps} reps`);
+          
+          const updated = updateExerciseWithSuggestion(exercise, suggestion);
+          
+          if (updated) {
+            updatedExercises.push(exercise.name);
+            // Mark this suggestion as used to prevent applying it to another exercise
+            usedSuggestions.add(suggestionKey);
+            console.log(`⭐ Successfully updated ${exercise.name} with suggestion and marked ${suggestionKey} as used`);
+            console.log(`⭐ Remaining unused suggestions: ${Object.keys(suggestions).filter(key => !usedSuggestions.has(key)).length}`);
           }
         } else {
-          return;
+          console.log(`⭐ No matching suggestion found for ${exercise.name}`);
         }
       }
       
-      console.log(`⭐ Using week key: ${nextWeekKey}`);
-      
-      // Continue with the rest of the function with the proper nextWeekKey
-      
-      // Find the matching workout in the next week
-      let nextWorkoutIndex = -1;
-      let matchingNextWorkout: any = null;
-      
-      // First try to find a workout with the same exercises
-      if (!data.workouts[nextWeekKey] || !Array.isArray(data.workouts[nextWeekKey])) {
-        console.error(`No workouts array found for week key ${nextWeekKey}`);
-        return;
-      }
-      
-      console.log(`⭐ Found ${data.workouts[nextWeekKey].length} workouts in ${nextWeekKey}`);
-      
-      data.workouts[nextWeekKey].forEach((nextWorkout: any, index: number) => {
-        // Check for same date day of week
-        if (!nextWorkout.date) {
-          console.log(`Workout at index ${index} has no date`);
-          return;
-        }
+      // Update the mesocycle document with the changes if any exercises were updated
+      if (updatedExercises.length > 0) {
+        // Prepare the update
+        const updatedWorkouts = {
+          ...workouts,
+          [nextWeekKey]: updatedNextWeekWorkouts
+        };
         
-        try {
-          const nextWorkoutDay = new Date(nextWorkout.date).getDay();
-          if (nextWorkoutDay === dayOfWeek) {
-            nextWorkoutIndex = index;
-            matchingNextWorkout = nextWorkout;
-            console.log(`⭐ Found matching workout by day of week: ${nextWorkout.name || 'Unnamed workout'}`);
-          }
-        } catch (e) {
-          console.error(`Error parsing date for workout at index ${index}:`, e);
-        }
-      });
-      
-      // If we couldn't find by day of week, try matching by exercise names
-      if (nextWorkoutIndex === -1 && workout.exercises && workout.exercises.length > 0) {
-        console.log("⭐ Trying to find matching workout by exercise names");
-        
-        const currentExerciseNames = workout.exercises.map((ex: any) => ex.name.toLowerCase());
-        
-        data.workouts[nextWeekKey].forEach((nextWorkout: any, index: number) => {
-          if (!nextWorkout.exercises) return;
-          
-          const nextExerciseNames = nextWorkout.exercises.map((ex: any) => ex.name.toLowerCase());
-          
-          // Calculate similarity score (# of matching exercises)
-          let matchCount = 0;
-          currentExerciseNames.forEach((name: string) => {
-            if (nextExerciseNames.includes(name)) matchCount++;
-          });
-          
-          // If we have at least one match and it's better than what we found before
-          if (matchCount > 0) {
-            nextWorkoutIndex = index;
-            matchingNextWorkout = nextWorkout;
-            console.log(`⭐ Found matching workout by exercises: ${nextWorkout.name || 'Unnamed workout'} (${matchCount} matching exercises)`);
-          }
+        // Update the Firestore document
+        await updateDoc(mesocycleRef, {
+          workouts: updatedWorkouts
         });
-      }
-      
-      // If we still couldn't find a match, just use the first workout
-      if (nextWorkoutIndex === -1 && data.workouts[nextWeekKey].length > 0) {
-        nextWorkoutIndex = 0;
-        matchingNextWorkout = data.workouts[nextWeekKey][0];
-        console.log(`⭐ No match found, using first workout in ${nextWeekKey}: ${matchingNextWorkout.name || 'Unnamed workout'}`);
-      }
-      
-      if (nextWorkoutIndex === -1 || !matchingNextWorkout) {
-        console.log("⭐ Could not find any workout in next week");
-        return;
-      }
-      
-      console.log(`⭐ Found workout to update in week ${nextWeek}:`, matchingNextWorkout.name || 'Unnamed workout');
-      
-      // Log details about the current workout exercises and suggestions
-      console.log("⭐ Current workout exercises:", workout.exercises.map((ex: any) => ({
-        id: ex.id,
-        name: ex.name
-      })));
-      
-      console.log("⭐ Suggestion keys:", Object.keys(suggestions));
-      
-      // Update each exercise in the next week's workout
-      let updatedAnyExercises = false;
-      
-      if (matchingNextWorkout.exercises && matchingNextWorkout.exercises.length > 0) {
-        console.log(`⭐ Next workout has ${matchingNextWorkout.exercises.length} exercises`);
-        console.log(`⭐ Next workout name: ${matchingNextWorkout.name}`);
         
-        // Log all exercises in the workout we're trying to match from
-        console.log("⭐ Current workout exercises:", JSON.stringify(workout.exercises.map((ex: any) => ({
-          id: ex.id,
-          name: ex.name
-        }))));
+        console.log(`⭐ Successfully updated next week's workout with ${updatedExercises.length} exercise updates`);
+        console.log(`⭐ Updated exercises: ${updatedExercises.join(', ')}`);
         
-        // Log all exercises in the next week's workout
-        console.log("⭐ Next week workout exercises:", JSON.stringify(matchingNextWorkout.exercises.map((ex: any) => ({
-          id: ex.id,
-          name: ex.name
-        }))));
-        
-        // Log all suggestions
-        console.log("⭐ All suggestions:", JSON.stringify(suggestions));
-        
-        // Go through each exercise in the next week's workout
-        matchingNextWorkout.exercises.forEach((nextExercise: any) => {
-          console.log(`⭐ Checking exercise: ${nextExercise.name} (ID: ${nextExercise.id})`);
-          
-          // Try multiple matching strategies
-          let matchFound = false;
-          
-          // 1. First try to match by ID
-          const matchingSuggestion = suggestions[nextExercise.id];
-          
-          if (matchingSuggestion) {
-            console.log(`⭐ Found match by ID for ${nextExercise.name}:`, matchingSuggestion);
-            // Update the exercise's target weight and reps
-            nextExercise.weight = matchingSuggestion.weight.toString();
-            nextExercise.reps = matchingSuggestion.reps.toString();
-            
-            // Update generatedSets if they exist
-            if (nextExercise.generatedSets && Array.isArray(nextExercise.generatedSets)) {
-              nextExercise.generatedSets.forEach((set: any) => {
-                if (set) {
-                  set.targetWeight = matchingSuggestion.weight.toString();
-                  set.targetReps = matchingSuggestion.reps.toString();
-                }
-              });
-            }
-            
-            updatedAnyExercises = true;
-            matchFound = true;
-          } 
-          
-          // 2. If no match by ID, try to match by exact name
-          if (!matchFound) {
-            console.log(`⭐ No match by ID, trying to match by name for: ${nextExercise.name}`);
-            
-            const currentExercise = workout.exercises.find((ex: any) => 
-              ex.name.toLowerCase() === nextExercise.name.toLowerCase()
-            );
-            
-            if (currentExercise && currentExercise.id) {
-              const byNameSuggestion = suggestions[currentExercise.id];
-              if (byNameSuggestion) {
-                console.log(`⭐ Found suggestion by exact name match for ${nextExercise.name}:`, byNameSuggestion);
-                
-                // Update the exercise's target weight and reps
-                nextExercise.weight = byNameSuggestion.weight.toString();
-                nextExercise.reps = byNameSuggestion.reps.toString();
-                
-                // Update generatedSets if they exist
-                if (nextExercise.generatedSets && Array.isArray(nextExercise.generatedSets)) {
-                  nextExercise.generatedSets.forEach((set: any) => {
-                    if (set) {
-                      set.targetWeight = byNameSuggestion.weight.toString();
-                      set.targetReps = byNameSuggestion.reps.toString();
-                    }
-                  });
-                }
-                
-                updatedAnyExercises = true;
-                matchFound = true;
-              }
-            }
-          }
-          
-          // 3. If still no match, try partial name matching
-          if (!matchFound) {
-            console.log(`⭐ No exact name match, trying partial name match for: ${nextExercise.name}`);
-            
-            // Find exercises with similar names
-            const similarExercises = workout.exercises.filter((ex: any) => {
-              // Convert both to lowercase for comparison
-              const currentName = ex.name.toLowerCase();
-              const nextName = nextExercise.name.toLowerCase();
-              
-              // Check if either contains the other
-              return currentName.includes(nextName) || nextName.includes(currentName) ||
-                     // Check for common exercise keywords across both names
-                     (currentName.includes('squat') && nextName.includes('squat')) ||
-                     (currentName.includes('bench') && nextName.includes('bench')) ||
-                     (currentName.includes('press') && nextName.includes('press')) ||
-                     (currentName.includes('row') && nextName.includes('row')) ||
-                     (currentName.includes('curl') && nextName.includes('curl')) ||
-                     (currentName.includes('deadlift') && nextName.includes('deadlift')) ||
-                     (currentName.includes('fly') && nextName.includes('fly'));
-            });
-            
-            if (similarExercises.length > 0) {
-              console.log(`⭐ Found ${similarExercises.length} similar exercises by name`);
-              
-              // Use the first similar exercise
-              const similarExercise = similarExercises[0];
-              const bySimilarNameSuggestion = suggestions[similarExercise.id];
-              
-              if (bySimilarNameSuggestion) {
-                console.log(`⭐ Found suggestion by similar name for ${nextExercise.name} using ${similarExercise.name}:`, bySimilarNameSuggestion);
-                
-                // Update the exercise's target weight and reps
-                nextExercise.weight = bySimilarNameSuggestion.weight.toString();
-                nextExercise.reps = bySimilarNameSuggestion.reps.toString();
-                
-                // Update generatedSets if they exist
-                if (nextExercise.generatedSets && Array.isArray(nextExercise.generatedSets)) {
-                  nextExercise.generatedSets.forEach((set: any) => {
-                    if (set) {
-                      set.targetWeight = bySimilarNameSuggestion.weight.toString();
-                      set.targetReps = bySimilarNameSuggestion.reps.toString();
-                    }
-                  });
-                }
-                
-                updatedAnyExercises = true;
-                matchFound = true;
-              }
-            }
-          }
-          
-          // 4. If all else fails, try matching position (index-based)
-          if (!matchFound && workout.exercises.length > 0) {
-            console.log(`⭐ No matches found by name, trying position-based matching for: ${nextExercise.name}`);
-            
-            // Find the current exercise index
-            const nextExerciseIndex = matchingNextWorkout.exercises.findIndex((ex: any) => ex.id === nextExercise.id);
-            
-            // Only proceed if we found the index and there's a corresponding exercise in the current workout
-            if (nextExerciseIndex !== -1 && nextExerciseIndex < workout.exercises.length) {
-              const positionBasedExercise = workout.exercises[nextExerciseIndex];
-              const byPositionSuggestion = suggestions[positionBasedExercise.id];
-              
-              if (byPositionSuggestion) {
-                console.log(`⭐ Found suggestion by position match for ${nextExercise.name} using ${positionBasedExercise.name}:`, byPositionSuggestion);
-                
-                // Update the exercise's target weight and reps
-                nextExercise.weight = byPositionSuggestion.weight.toString();
-                nextExercise.reps = byPositionSuggestion.reps.toString();
-                
-                // Update generatedSets if they exist
-                if (nextExercise.generatedSets && Array.isArray(nextExercise.generatedSets)) {
-                  nextExercise.generatedSets.forEach((set: any) => {
-                    if (set) {
-                      set.targetWeight = byPositionSuggestion.weight.toString();
-                      set.targetReps = byPositionSuggestion.reps.toString();
-                    }
-                  });
-                }
-                
-                updatedAnyExercises = true;
-                matchFound = true;
-              }
-            }
-          }
-          
-          if (!matchFound) {
-            console.log(`⭐ Could not find any match for exercise: ${nextExercise.name}`);
-          }
-        });
+        return updatedExercises;
       } else {
-        console.log("⭐ Next workout has no exercises");
-      }
-      
-      if (updatedAnyExercises) {
-        // Update the document with the new data
-        await updateDoc(docRef, {
-          workouts: data.workouts,
-          updatedAt: new Date().toISOString()
-        });
-        
-        console.log("⭐ Successfully updated next week's workout with new weights and reps!");
-      } else {
-        console.log("No exercises were updated for next week");
+        console.log(`⭐ No exercises were updated in next week's workout`);
+        return [];
       }
     } catch (error) {
       console.error("Error updating next week's workout:", error);
+      throw error;
     }
   };
   
   // Mark workout as complete with feedback
   const completeWorkout = async () => {
-    if (!workout || !user) return;
-    
-    // Calculate suggestions for next week
-    const suggestions = calculateNextWeekSuggestions();
-    
-    // Update next week's workout with suggested weights if available
-    if (Object.keys(suggestions).length > 0) {
-      await updateNextWeekWorkout(suggestions);
-    }
-    
-    // Calculate progress data
-    const totalSets = exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
-    const completedSetCount = completedSets.size;
-    const progressPercentage = Math.round((completedSetCount / totalSets) * 100);
-    
-    // Prepare workout completion data
-    const completionData = {
-      id: workout.id,
-      userId: user.uid,
-      date: new Date().toISOString(),
-      name: workout.name,
-      mesocycleId: currentMesocycle?.id,
-      week: workout.weekNum,
-      exercises: exercises.map(ex => ({
-        id: ex.id,
-        name: ex.name,
-        suggestions: suggestions[ex.id] || null,
-        sets: ex.sets.map((set: any) => ({
-          reps: set.completedReps || set.targetReps,
-          weight: set.completedWeight || set.targetWeight,
-          completed: completedSets.has(`${ex.id}-${set.id}`)
-        }))
-      })),
-      feedback: feedback,
-      weekRPE: workout.weekRPE,
-      progress: progressPercentage,
-      completed: progressPercentage === 100,
-    };
-    
-    // Update workout progress in store/database
+    if (!user || !workout || !currentMesocycle) {
+      toast.error("Cannot complete workout: missing user, workout, or mesocycle data");
+        return;
+      }
+      
+    setIsCompleting(true);
+
     try {
-      dispatch(updateWorkoutProgress(completionData) as any);
-      router.push('/dashboard');
+      // Log the current state of exercises
+      console.log("⭐ Completing workout with exercises:", exercises);
+      
+      // Create a working copy of exercises to avoid modifying read-only objects
+      const workingExercises = JSON.parse(JSON.stringify(exercises));
+      
+      // Create a one-to-one map between current exercises and their suggestions
+      // This ensures each exercise's data is used only for the corresponding exercise in the next week
+      const exerciseSuggestions: Record<string, { 
+        weight: number, 
+        reps: number, 
+        sets: number, 
+        exerciseName: string, 
+        exerciseId: string,
+        baseExerciseId: string | null
+      }> = {};
+      
+      let missingFeedback = false;
+      let allExercisesChecked = true;
+      
+      // Log the exercise sets to troubleshoot the weight detection issue
+      console.log("⭐ DETAILED EXERCISE DATA DEBUG:");
+      workingExercises.forEach((exercise: any, eIdx: number) => {
+        console.log(`Exercise ${eIdx + 1}: ${exercise.name}`);
+        console.log(`- Sets array:`, exercise.sets);
+        console.log(`- Completed sets count:`, exercise.sets.filter((s: any) => 
+          completedSets.has(`${exercise.id}-${s.id}`)
+        ).length);
+      });
+      
+      // First, process all exercises and collect their weight data
+      for (let exerciseIndex = 0; exerciseIndex < workingExercises.length; exerciseIndex++) {
+        const exercise = workingExercises[exerciseIndex];
+        
+        // Skip exercises that aren't marked as completed
+        if (!exercise.completed && !exercise.sets.some((set: any) => 
+          completedSets.has(`${exercise.id}-${set.id}`)
+        )) {
+          console.log(`⭐ Exercise ${exercise.name} not completed, skipping`);
+          allExercisesChecked = false;
+          continue;
+        }
+        
+        console.log(`⭐ Processing exercise [${exerciseIndex}]: ${exercise.name} (ID: ${exercise.id}, baseExerciseId: ${exercise.baseExerciseId || 'none'})`);
+        
+        // Initialize with default feedback if none exists
+        if (!exercise.feedback) {
+          exercise.feedback = {};
+        }
+        
+        // Gather actual weights used by the user from sets
+        let totalWeight = 0;
+        let totalReps = 0;
+        let setCount = 0;
+        
+        // Check completed sets for this exercise
+        const completedExerciseSets = exercise.sets.filter((set: any) => 
+          completedSets.has(`${exercise.id}-${set.id}`)
+        );
+        
+        console.log(`⭐ Found ${completedExerciseSets.length} completed sets for ${exercise.name}`);
+        
+        if (completedExerciseSets.length > 0) {
+          completedExerciseSets.forEach((set: any, index: number) => {
+            // Get the weight and reps values directly
+            const setWeight = set.completedWeight ? parseFloat(set.completedWeight) : 
+                              (set.targetWeight ? parseFloat(set.targetWeight) : 0);
+                              
+            const setReps = set.completedReps ? parseInt(set.completedReps) : 
+                            (set.targetReps ? parseInt(set.targetReps) : 0);
+            
+            console.log(`⭐ COMPLETED Set ${index + 1} for ${exercise.name}:`, {
+              rawCompletedWeight: set.completedWeight,
+              parsedCompletedWeight: setWeight,
+              targetWeight: set.targetWeight,
+              rawCompletedReps: set.completedReps,
+              parsedCompletedReps: setReps,
+              targetReps: set.targetReps
+            });
+            
+            // Use either completed or target values (if completed is missing)
+            if (setWeight > 0 && setReps > 0) {
+              console.log(`⭐ Adding set data: weight=${setWeight}, reps=${setReps}`);
+              totalWeight += setWeight;
+              totalReps += setReps;
+              setCount++;
+            } else {
+              console.log(`⭐ Set has invalid weight/reps: ${setWeight}kg x ${setReps}`);
+            }
+          });
+        } else {
+          console.log(`⭐ No completed sets found for ${exercise.name}`);
+        }
+        
+        // Calculate average weight and reps if completed sets were found
+        let exerciseWeight = 0;
+        let exerciseReps = 0;
+        
+        if (setCount > 0) {
+          exerciseWeight = totalWeight / setCount;
+          exerciseReps = Math.round(totalReps / setCount);
+          console.log(`⭐ Using ACTUAL COMPLETED data for ${exercise.name}: avg weight=${exerciseWeight}, avg reps=${exerciseReps} from ${setCount} sets`);
+        } else {
+          // If no completed weights/reps found but sets are marked complete,
+          // use target weights as fallback
+          const targetSets = exercise.sets.filter((set: any) => set.targetWeight && set.targetReps);
+          
+          if (targetSets.length > 0) {
+            const totalTargetWeight = targetSets.reduce((sum: number, set: any) => 
+              sum + (parseFloat(set.targetWeight) || 0), 0);
+            const totalTargetReps = targetSets.reduce((sum: number, set: any) => 
+              sum + (parseInt(set.targetReps) || 0), 0);
+            
+            exerciseWeight = totalTargetWeight / targetSets.length;
+            exerciseReps = Math.round(totalTargetReps / targetSets.length);
+            setCount = targetSets.length;
+            
+            console.log(`⭐ No completed data, using TARGET data as fallback for ${exercise.name}: weight=${exerciseWeight}, reps=${exerciseReps}`);
+          } else {
+            // Set default values if no data is available at all
+            exerciseWeight = exercise.weight ? parseFloat(exercise.weight) : 45;
+            exerciseReps = exercise.reps ? parseInt(exercise.reps) : 8;
+            setCount = exercise.sets.length;
+            
+            console.log(`⭐ No set data at all, using DEFAULT data for ${exercise.name}: weight=${exerciseWeight}, reps=${exerciseReps}`);
+          }
+        }
+        
+        // Only proceed if we have valid weight data
+        if (exerciseWeight <= 0) {
+          console.log(`⭐ Invalid weight (${exerciseWeight}) for ${exercise.name}, setting to default`);
+          
+          // Set a reasonable default weight based on the exercise name
+          if (exercise.name.toLowerCase().includes('squat')) {
+            exerciseWeight = 45;
+          } else if (exercise.name.toLowerCase().includes('bench')) {
+            exerciseWeight = 45;
+          } else if (exercise.name.toLowerCase().includes('deadlift')) {
+            exerciseWeight = 60;
+          } else if (exercise.name.toLowerCase().includes('press')) {
+            exerciseWeight = 30;
+          } else {
+            exerciseWeight = 25; // Default weight
+          }
+        }
+        
+        // Process feedback (either provided or default)
+        const feedback = exercise.feedback.weightFeeling || exercise.weightFeeling || "just_right";
+        
+        // Get RPE if available (default to 7 if not provided)
+        const rpe = exercise.feedback.rpe || exercise.rpe || 7;
+        
+        console.log(`⭐ Final values for ${exercise.name}: Weight=${exerciseWeight}, Reps=${exerciseReps}, RPE=${rpe}, Feedback=${feedback}`);
+        
+        // Calculate suggested weight change based on feedback
+        let weightAdjustmentFactor = 1.0; // Default: no change
+        
+        // Adjust weight based on feedback and RPE
+        if (feedback === "too_light") {
+          // If RPE is low (1-4), increase weight more aggressively
+          if (rpe <= 4) {
+            weightAdjustmentFactor = 1.10; // 10% increase
+          } 
+          // If RPE is moderate (5-7), increase weight moderately
+          else if (rpe <= 7) {
+            weightAdjustmentFactor = 1.05; // 5% increase
+          } 
+          // If RPE is high (8-10), increase weight conservatively
+          else {
+            weightAdjustmentFactor = 1.025; // 2.5% increase
+          }
+        } 
+        else if (feedback === "light") {
+          // Smaller increases based on RPE
+          if (rpe <= 4) {
+            weightAdjustmentFactor = 1.075; // 7.5% increase
+          } 
+          else if (rpe <= 7) {
+            weightAdjustmentFactor = 1.04; // 4% increase
+          } 
+          else {
+            weightAdjustmentFactor = 1.02; // 2% increase
+          }
+        } 
+        else if (feedback === "just_right") {
+          // For "just right" feedback, make small adjustments based on RPE
+          if (rpe <= 5) {
+            weightAdjustmentFactor = 1.025; // 2.5% increase
+          } 
+          else if (rpe <= 7) {
+            weightAdjustmentFactor = 1.015; // 1.5% increase
+          } 
+          else if (rpe <= 9) {
+            weightAdjustmentFactor = 1.005; // 0.5% increase
+          }
+          // RPE of 10 means keep weight the same
+        } 
+        else if (feedback === "heavy") {
+          // For "heavy" feedback, keep weight the same or reduce slightly
+          if (rpe >= 9) {
+            weightAdjustmentFactor = 0.98; // 2% decrease
+          } 
+          else if (rpe >= 7) {
+            weightAdjustmentFactor = 0.995; // 0.5% decrease
+          }
+          // Otherwise keep the same weight
+        } 
+        else if (feedback === "too_heavy") {
+          // Reduce weight more based on higher RPE
+          if (rpe >= 9) {
+            weightAdjustmentFactor = 0.95; // 5% decrease
+          } 
+          else if (rpe >= 7) {
+            weightAdjustmentFactor = 0.97; // 3% decrease
+          } 
+          else {
+            weightAdjustmentFactor = 0.98; // 2% decrease
+          }
+        }
+        
+        // Calculate the new suggested weight
+        let suggestedWeight = exerciseWeight * weightAdjustmentFactor;
+        
+        // Round the weight to the nearest 1.25 (for standard plate increments)
+        suggestedWeight = Math.round(suggestedWeight * 4) / 4;
+        
+        // Ensure we don't suggest a weight of 0 or less
+        if (suggestedWeight <= 0 || suggestedWeight < 5) {
+          suggestedWeight = exerciseWeight > 5 ? exerciseWeight : 5;
+        }
+        
+        console.log(`⭐ WEIGHT CALCULATION for ${exercise.name}:`, {
+          originalWeight: exerciseWeight,
+          adjustmentFactor: weightAdjustmentFactor,
+          calculatedWeight: exerciseWeight * weightAdjustmentFactor,
+          roundedWeight: suggestedWeight
+        });
+        
+        // Store suggestion in the exercise-specific map
+        exerciseSuggestions[exercise.id] = {
+          weight: suggestedWeight,
+          reps: exerciseReps,
+          sets: setCount > 0 ? setCount : (parseInt(exercise.sets) || 3),
+          exerciseName: exercise.name,
+          exerciseId: exercise.id,
+          baseExerciseId: exercise.baseExerciseId || null
+        };
+      }
+      
+      // Log the suggestions we're working with
+      console.log("⭐ Exercise suggestions for next week:");
+      Object.entries(exerciseSuggestions).forEach(([exerciseId, suggestion]) => {
+        console.log(`  - Exercise ID ${exerciseId} (${suggestion.exerciseName}): ${suggestion.weight}kg x ${suggestion.reps} reps`);
+      });
+      
+      // Check if we have any suggestions at all
+      if (Object.keys(exerciseSuggestions).length === 0) {
+        console.log("⭐ NO SUGGESTIONS AVAILABLE: No exercises have completed weight data");
+        toast.error("Cannot update next week's weights: You must complete weights for at least one exercise");
+        setIsCompleting(false);
+        return;
+      }
+      
+      // Now, update the next week's workout with our exercise-specific suggestions
+      try {
+        // Get the current week and workout info to find next week
+        const weekMatch = workout?.id.match(/workout-w(\d+)-(\d+)-(\d+)/);
+        if (!weekMatch) {
+          throw new Error(`Cannot parse week from workout ID: ${workout?.id}`);
+        }
+        
+        // Extract current week number
+        const currentWeekNum = parseInt(weekMatch[1]);
+        const nextWeekNum = currentWeekNum + 1;
+        
+        console.log(`⭐ Current week: ${currentWeekNum}, Next week: ${nextWeekNum}`);
+        
+        // Get the mesocycle data to find next week's workouts
+        const mesocycleRef = doc(db, 'mesocycles', currentMesocycle.id);
+        const mesocycleSnap = await getDoc(mesocycleRef);
+        
+        if (!mesocycleSnap.exists()) {
+          throw new Error("Mesocycle document not found");
+        }
+        
+        const mesocycleData = mesocycleSnap.data();
+        const workouts = mesocycleData.workouts || {};
+        
+        // Get next week's key
+        const nextWeekKey = `week${nextWeekNum}`;
+        
+        if (!workouts[nextWeekKey]) {
+          throw new Error(`Next week (${nextWeekKey}) not found in mesocycle`);
+        }
+        
+        // Deep clone the current workout structure
+        const updatedWorkouts = JSON.parse(JSON.stringify(workouts));
+        const nextWeekWorkouts = updatedWorkouts[nextWeekKey];
+        
+        // Check if any workouts exist for next week
+        if (!nextWeekWorkouts || !Array.isArray(nextWeekWorkouts) || nextWeekWorkouts.length === 0) {
+          throw new Error(`No workouts found for next week (${nextWeekKey})`);
+        }
+        
+        // Track which exercises were successfully updated
+        const updatedExercises: string[] = [];
+        
+        // Go through each workout in the next week
+        for (let workoutIndex = 0; workoutIndex < nextWeekWorkouts.length; workoutIndex++) {
+          const nextWorkout = nextWeekWorkouts[workoutIndex];
+          console.log(`⭐ Checking next week workout ${workoutIndex + 1}: ${nextWorkout.id}`);
+          
+          if (!nextWorkout.exercises || !Array.isArray(nextWorkout.exercises)) {
+            console.log(`⭐ No exercises found in workout ${nextWorkout.id}, skipping`);
+            continue;
+          }
+          
+          // Go through each exercise in the next week's workout
+          for (let exerciseIndex = 0; exerciseIndex < nextWorkout.exercises.length; exerciseIndex++) {
+            const nextExercise = nextWorkout.exercises[exerciseIndex];
+            console.log(`⭐ Checking exercise ${exerciseIndex + 1}: ${nextExercise.name} (${nextExercise.id})`);
+            
+            // Try to find a matching suggestion
+            let matchedSuggestion = null;
+            let matchReason = '';
+            
+            // 1. First try matching by baseExerciseId (highest priority)
+            if (nextExercise.baseExerciseId) {
+              // Look for a suggestion with the same baseExerciseId
+              for (const [exerciseId, suggestion] of Object.entries(exerciseSuggestions)) {
+                if (suggestion.baseExerciseId && suggestion.baseExerciseId === nextExercise.baseExerciseId) {
+                  matchedSuggestion = suggestion;
+                  matchReason = `baseExerciseId match: ${nextExercise.baseExerciseId}`;
+                  console.log(`⭐ FOUND MATCH: ${nextExercise.name} matched with ${suggestion.exerciseName} by baseExerciseId`);
+                  console.log(`⭐ Weight data: ${suggestion.weight}kg x ${suggestion.reps} reps`);
+                  break;
+                }
+              }
+            }
+            
+            // 2. Try matching by exact name if no baseExerciseId match
+            if (!matchedSuggestion) {
+              for (const [exerciseId, suggestion] of Object.entries(exerciseSuggestions)) {
+                if (suggestion.exerciseName.toLowerCase() === nextExercise.name.toLowerCase()) {
+                  matchedSuggestion = suggestion;
+                  matchReason = `exact name match: ${nextExercise.name}`;
+                  console.log(`⭐ FOUND MATCH: ${nextExercise.name} matched with ${suggestion.exerciseName} by exact name`);
+                  console.log(`⭐ Weight data: ${suggestion.weight}kg x ${suggestion.reps} reps`);
+                  break;
+                }
+              }
+            }
+            
+            // 3. Try partial name matching as a last resort
+            if (!matchedSuggestion) {
+              for (const [exerciseId, suggestion] of Object.entries(exerciseSuggestions)) {
+                // Only consider strong matches where one name contains the other
+                const nameA = suggestion.exerciseName.toLowerCase();
+                const nameB = nextExercise.name.toLowerCase();
+                
+                if (nameA.includes(nameB) || nameB.includes(nameA)) {
+                  // This is a strong partial match
+                  matchedSuggestion = suggestion;
+                  matchReason = `partial name match: "${suggestion.exerciseName}" ~ "${nextExercise.name}"`;
+                  console.log(`⭐ FOUND MATCH: ${nextExercise.name} matched with ${suggestion.exerciseName} by partial name`);
+                  console.log(`⭐ Weight data: ${suggestion.weight}kg x ${suggestion.reps} reps`);
+                  break;
+                }
+              }
+            }
+            
+            // If we found a match, update the exercise
+            if (matchedSuggestion) {
+              console.log(`⭐ [EXERCISE UPDATE] Found match for ${nextExercise.name} using ${matchReason}`);
+              console.log(`⭐ APPLYING DATA: ${matchedSuggestion.weight}kg x ${matchedSuggestion.reps} reps from "${matchedSuggestion.exerciseName}"`);
+              
+              const updated = updateExerciseWithSuggestion(nextExercise, matchedSuggestion);
+              
+              if (updated) {
+                updatedExercises.push(nextExercise.name);
+                // Remove this suggestion to prevent reusing it
+                console.log(`⭐ REMOVING suggestion for ${matchedSuggestion.exerciseName} (ID: ${matchedSuggestion.exerciseId}) from pool`);
+                delete exerciseSuggestions[matchedSuggestion.exerciseId];
+                console.log(`⭐ Successfully updated ${nextExercise.name} with ${matchedSuggestion.weight}kg`);
+                
+                // Log remaining suggestions
+                console.log(`⭐ REMAINING SUGGESTIONS:`, Object.entries(exerciseSuggestions).map(([id, sugg]) => 
+                  `${sugg.exerciseName}: ${sugg.weight}kg`).join(', ')
+                );
+              }
+      } else {
+              console.log(`⭐ NO MATCH: Could not find matching suggestion for ${nextExercise.name}`);
+            }
+          }
+        }
+        
+        // Save updated workouts to Firebase if any changes were made
+        if (updatedExercises.length > 0) {
+          await updateDoc(mesocycleRef, {
+            workouts: updatedWorkouts
+          });
+          
+          console.log(`⭐ Successfully updated ${updatedExercises.length} exercises in next week's workouts`);
+          toast.success(`Next week's target weights have been updated for ${updatedExercises.length} exercises`);
+        } else {
+          console.log(`⭐ No exercises were updated`);
+          toast.error("No exercises in next week's workout could be matched to update");
+        }
+        
+        // Navigate to mesocycle page
+        router.push(`/mesocycle/${currentMesocycle.id}`);
     } catch (error) {
-      console.error('Error completing workout:', error);
+        console.error("Error updating next week's workout:", error);
+        toast.error("Failed to update next week's weights. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error processing workout completion:", error);
+      toast.error("Failed to process workout completion. Please try again.");
+    } finally {
+      setIsCompleting(false);
     }
   };
   
@@ -995,6 +1583,7 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
   }
 
   return (
+    <>
     <div className="max-w-3xl mx-auto px-4 py-6 pb-24">
       {/* Header */}
       <div className="flex justify-between items-start mb-6">
@@ -1197,7 +1786,112 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
           </button>
         </div>
       </div>
+        
+        {/* Weight Feeling Survey */}
+        {weightSurveyOpen && surveyExercise && (
+          <WeightFeelingSurvey
+            isOpen={weightSurveyOpen}
+            onClose={() => {
+              setWeightSurveyOpen(false);
+            }}
+            mesocycleId={surveyExercise.mesocycleId}
+            weekKey={surveyExercise.weekKey}
+            workoutIndex={surveyExercise.workoutIndex}
+            exerciseIndex={surveyExercise.exerciseIndex}
+            exerciseName={surveyExercise.exerciseName}
+            userId={user?.uid || null}
+            isAutoPopup={surveyExercise.isAutoPopup}
+            onFeedbackSaved={() => {
+              // Update local state with the new feedback - Use a proper state update
+              setExercises(prevExercises => {
+                // Create a deep copy to avoid modifying read-only objects
+                const updatedExercises = JSON.parse(JSON.stringify(prevExercises));
+                
+                // Find the exercise that was just updated
+                const exerciseIndex = updatedExercises.findIndex((ex: any) => 
+                  ex.name === surveyExercise.exerciseName
+                );
+                
+                if (exerciseIndex >= 0) {
+                  // Create a new feedback object if it doesn't exist
+                  if (!updatedExercises[exerciseIndex].feedback) {
+                    updatedExercises[exerciseIndex].feedback = {};
+                  }
+                  
+                  // Set temporary feedback value to be updated from Firebase later
+                  updatedExercises[exerciseIndex].feedback.weightFeeling = "just_right";
+                  console.log(`⭐ Updated local state for ${surveyExercise.exerciseName} with temporary feedback value`);
+                }
+                
+                return updatedExercises;
+              });
+              
+              // Fetch the actual value from Firebase as before...
+              if (currentMesocycle) {
+                const docRef = doc(db, 'mesocycles', currentMesocycle.id);
+                getDoc(docRef).then(docSnap => {
+                  if (docSnap.exists()) {
+                    // Process Firebase data as before...
+                  }
+                }).catch(error => {
+                  console.error("Error fetching updated feedback from Firebase:", error);
+                });
+              }
+              
+              console.log("Weight feeling feedback saved and local state updated");
+            }}
+          />
+        )}
     </div>
+      
+      {/* Weight Suggestions Modal */}
+      <Modal
+        isOpen={suggestionModalOpen}
+        onClose={() => setSuggestionModalOpen(false)}
+        title="Weight Suggestions for Next Week"
+      >
+        <div className="p-4">
+          <p className="text-gray-300 mb-4">
+            Based on your feedback, here are the suggested weights for your next workout:
+          </p>
+          
+          <div className="space-y-3 max-h-64 overflow-y-auto">
+            {Object.values(weightSuggestions).map((suggestion, index) => (
+              <div key={index} className="bg-gray-800 rounded-lg p-3">
+                <h3 className="font-medium text-white">{suggestion.exerciseName}</h3>
+                <div className="flex justify-between text-sm mt-1">
+                  <span className="text-gray-400">Suggested Weight:</span>
+                  <span className="text-neon-green font-medium">{suggestion.weight} kg</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Reps:</span>
+                  <span>{suggestion.reps}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Sets:</span>
+                  <span>{suggestion.sets}</span>
+                </div>
+              </div>
+            ))}
+            
+            {Object.keys(weightSuggestions).length === 0 && (
+              <p className="text-gray-400 text-center py-4">
+                No weight suggestions available. Make sure to provide feedback for completed exercises.
+              </p>
+            )}
+          </div>
+          
+          <div className="mt-6 flex justify-end">
+            <button
+              className="bg-neon-green hover:bg-neon-green/90 text-black font-medium px-4 py-2 rounded"
+              onClick={() => setSuggestionModalOpen(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </>
   );
 }
 
