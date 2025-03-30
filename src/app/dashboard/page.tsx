@@ -17,9 +17,7 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
         <h1 className="text-3xl font-bold mb-4 md:mb-0">Dashboard</h1>
         <div className="flex items-center gap-4">
-          <Link href="/workout/new" className="btn-primary flex items-center gap-2">
-            <Plus className="w-4 h-4" /> New Workout
-          </Link>
+          
           <Link href="/settings" className="p-2 rounded-full bg-black/30 hover:bg-black/50 transition-colors">
             <Settings className="w-5 h-5" />
           </Link>
@@ -64,9 +62,7 @@ export default function Dashboard() {
               ) : (
                 <div className="card p-8 text-center">
                   <p className="text-gray-400 mb-4">No active workout</p>
-                  <Link href="/workout/new" className="btn-primary inline-flex items-center gap-2">
-                    <Plus className="w-4 h-4" /> Start Workout
-                  </Link>
+                 
                 </div>
               )}
             </div>
