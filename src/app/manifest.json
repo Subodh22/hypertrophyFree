@@ -1,11 +1,11 @@
 {
   "name": "Hypertrophy Workout App",
-  "short_name": "Workout App",
+  "short_name": "Hypertrophy",
   "description": "Track and manage your workouts with intelligent progression",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
-  "theme_color": "#39FF14",
+  "theme_color": "#000000",
   "orientation": "portrait",
   "icons": [
     {

@@ -13,26 +13,26 @@ export default function BottomNavigation() {
     {
       name: 'Home',
       href: '/dashboard',
-      icon: <Home className="w-5 h-5" />,
+      icon: <Home className="w-6 h-6" />,
       showAlways: true,
     },
     {
       name: 'Mesocycle',
       href: '/mesocycle',
-      icon: <Calendar className="w-5 h-5" />,
+      icon: <Calendar className="w-6 h-6" />,
       showAlways: true,
     },
     {
       name: user ? 'Profile' : 'Login',
       href: user ? '/profile' : '/login',
-      icon: user ? <User className="w-5 h-5" /> : <LogIn className="w-5 h-5" />,
+      icon: user ? <User className="w-6 h-6" /> : <LogIn className="w-6 h-6" />,
       showAlways: true,
     },
   ];
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 w-full bg-black/80 backdrop-blur-md border-t border-neon-green/20 z-50">
-      <nav className="flex justify-around items-center h-16">
+    <div className="md:hidden fixed bottom-4 left-0 w-full bg-black/95 border-t border-neon-green/20 z-50">
+      <nav className="flex justify-around items-center h-16 px-4">
         {navItems.map((item) => {
           const isActive = 
             pathname === item.href || 
@@ -42,18 +42,18 @@ export default function BottomNavigation() {
             <Link 
               key={item.name}
               href={item.href}
-              className={`flex flex-col items-center justify-center w-full h-full transition-colors ${
+              className={`flex flex-col items-center justify-center transition-colors relative ${
                 isActive 
                   ? 'text-neon-green' 
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center gap-1.5">
                 {item.icon}
-                <span className="text-xs mt-1">{item.name}</span>
+                <span className="text-xs font-medium">{item.name}</span>
               </div>
               {isActive && (
-                <div className="absolute top-0 w-8 h-1 bg-neon-green rounded-b-full" />
+                <div className="absolute -top-[1px] w-12 h-[2px] bg-neon-green" />
               )}
             </Link>
           );
