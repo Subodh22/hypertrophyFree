@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, Dumbbell, User, LogIn, Calendar } from 'lucide-react';
+import { Home, User, LogIn, Calendar } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 
 export default function BottomNavigation() {
@@ -14,12 +14,6 @@ export default function BottomNavigation() {
       name: 'Home',
       href: '/dashboard',
       icon: <Home className="w-5 h-5" />,
-      showAlways: true,
-    },
-    {
-      name: 'Workout',
-      href: '/workout',
-      icon: <Dumbbell className="w-5 h-5" />,
       showAlways: true,
     },
     {

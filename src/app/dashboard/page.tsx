@@ -3,15 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useSelector } from 'react-redux';
-import { BarChart4, Calendar, Dumbbell, Plus, ChevronRight, Settings } from 'lucide-react';
+import { BarChart4, Dumbbell, Plus, ChevronRight, Settings } from 'lucide-react';
 import { RootState } from '@/lib/store';
 import WorkoutCard from '@/components/WorkoutCard';
-import MesocycleProgress from '@/components/MesocycleProgress';
 import StatsOverview from '@/components/StatsOverview';
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'mesocycle' | 'history'>('overview');
-  const { currentWorkout, workoutHistory, currentMesocycle } = useSelector((state: RootState) => state.workout);
+  const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
+  const { currentWorkout, workoutHistory } = useSelector((state: RootState) => state.workout);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -34,12 +33,6 @@ export default function Dashboard() {
           onClick={() => setActiveTab('overview')}
           icon={<BarChart4 className="w-4 h-4" />}
           label="Overview"
-        />
-        <TabButton 
-          active={activeTab === 'mesocycle'} 
-          onClick={() => setActiveTab('mesocycle')}
-          icon={<Calendar className="w-4 h-4" />}
-          label="Mesocycle"
         />
         <TabButton 
           active={activeTab === 'history'} 
@@ -99,31 +92,6 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-          </div>
-        )}
-        
-        {activeTab === 'mesocycle' && (
-          <div>
-            {currentMesocycle ? (
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <MesocycleProgress mesocycle={currentMesocycle} />
-                </div>
-                <div className="flex justify-end mt-4">
-                  <Link href="/mesocycle" className="text-sm text-neon-green flex items-center gap-1 hover:underline">
-                    View All Mesocycles <ChevronRight className="w-4 h-4" />
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <div className="card p-8 text-center">
-                <h2 className="text-xl font-bold mb-4">No Active Mesocycle</h2>
-                <p className="text-gray-400 mb-6">Create a mesocycle to plan your training blocks</p>
-                <Link href="/mesocycle/new" className="btn-primary inline-flex items-center gap-2">
-                  <Plus className="w-4 h-4" /> Create Mesocycle
-                </Link>
-              </div>
-            )}
           </div>
         )}
         

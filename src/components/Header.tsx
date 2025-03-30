@@ -30,8 +30,6 @@ export default function Header() {
   
   const navItems = [
     { name: 'Dashboard', href: '/dashboard' },
-    { name: 'Workouts', href: '/workout' },
-    { name: 'Exercises', href: '/exercises' },
     { name: 'Mesocycles', href: '/mesocycle' },
   ];
   
