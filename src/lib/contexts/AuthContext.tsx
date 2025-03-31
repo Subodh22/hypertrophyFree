@@ -59,26 +59,11 @@ export function AuthProvider({
     }).catch((error) => {
       console.error('Error getting redirect result:', error);
       setError(error instanceof Error ? error : new Error('Failed to complete sign in'));
+      // Clear any partial state
+      Cookies.remove('firebaseToken', { path: '/' });
+      Cookies.remove('__session', { path: '/' });
+      setUser(null);
     });
-
-    // Check if there's a pending redirect
-    const pendingRedirect = localStorage.getItem('pendingRedirect');
-    if (pendingRedirect) {
-      localStorage.removeItem('pendingRedirect');
-      // Force a token refresh
-      auth.currentUser?.getIdToken(true).then(token => {
-        Cookies.set('firebaseToken', token, { 
-          expires: 30, 
-          path: '/',
-          sameSite: 'lax'
-        });
-        Cookies.set('__session', token, { 
-          expires: 30, 
-          path: '/',
-          sameSite: 'lax'
-        });
-      });
-    }
 
     const unsubscribe = onAuthStateChanged(
       auth,
@@ -89,7 +74,7 @@ export function AuthProvider({
             setUser(user);
             
             // Get token and set cookies for server-side auth
-            const token = await user.getIdToken();
+            const token = await user.getIdToken(true); // Force refresh
             
             // Set cookie for server middleware
             Cookies.set('firebaseToken', token, { 
@@ -109,6 +94,10 @@ export function AuthProvider({
           } catch (error) {
             console.error('Error setting authentication cookies:', error);
             setError(error instanceof Error ? error : new Error('Authentication error'));
+            // Clear any partial state
+            Cookies.remove('firebaseToken', { path: '/' });
+            Cookies.remove('__session', { path: '/' });
+            setUser(null);
           }
         } else {
           // User is signed out
@@ -136,9 +125,12 @@ export function AuthProvider({
     setLoading(true);
     try {
       setError(null);
-      // Set a flag to indicate we're expecting a redirect
-      localStorage.setItem('pendingRedirect', 'true');
       const provider = new GoogleAuthProvider();
+      // Add custom parameters for better mobile experience
+      provider.setCustomParameters({
+        prompt: 'select_account',
+        login_hint: 'user@example.com'
+      });
       await signInWithRedirect(auth, provider);
       // Note: The onAuthStateChanged listener will handle setting the user and cookies
     } catch (error) {

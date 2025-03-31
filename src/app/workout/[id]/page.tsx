@@ -1906,184 +1906,184 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 overflow-y-auto pb-52">
         <div className="max-w-3xl mx-auto px-4 py-6">
-          {/* Header */}
-          <div className="flex justify-between items-start mb-6">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <button
+            onClick={() => router.back()}
+            className="flex items-center text-gray-400 hover:text-white mb-2"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" /> Back
+          </button>
+          <h1 className="text-2xl font-bold">{workout.name}</h1>
+          <p className="text-neon-green mt-1 text-sm">Week {workout.weekNum}</p>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <div className="flex items-center bg-gray-800 rounded-full px-3 py-1">
+            <Clock className="w-4 h-4 mr-2 text-gray-400" />
+            <span className={`font-mono ${timerActive ? 'text-neon-green' : 'text-gray-400'}`}>
+              {formatTime(timer)}
+            </span>
+          </div>
+          <button 
+            onClick={() => setTimerActive(!timerActive)}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800"
+          >
+            {timerActive ? <X className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+      
+      {/* Weekly RPE Target */}
+      {workout.weekRPE && (
+        <div className="card p-4 mb-6 bg-gradient-to-r from-neon-green/10 to-transparent border-l-4 border-neon-green">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-neon-green shrink-0 mt-0.5" />
             <div>
-              <button
-                onClick={() => router.back()}
-                className="flex items-center text-gray-400 hover:text-white mb-2"
-              >
-                <ArrowLeft className="w-4 h-4 mr-1" /> Back
-              </button>
-              <h1 className="text-2xl font-bold">{workout.name}</h1>
-              <p className="text-neon-green mt-1 text-sm">Week {workout.weekNum}</p>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <div className="flex items-center bg-gray-800 rounded-full px-3 py-1">
-                <Clock className="w-4 h-4 mr-2 text-gray-400" />
-                <span className={`font-mono ${timerActive ? 'text-neon-green' : 'text-gray-400'}`}>
-                  {formatTime(timer)}
-                </span>
-              </div>
-              <button 
-                onClick={() => setTimerActive(!timerActive)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800"
-              >
-                {timerActive ? <X className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              </button>
+              <h3 className="font-medium text-neon-green text-sm">Week {workout.weekNum} RPE Target: {workout.weekRPE.min}-{workout.weekRPE.max}</h3>
+              <p className="text-sm text-gray-300 mt-1">{workout.weekRPE.label}</p>
             </div>
           </div>
-          
-          {/* Weekly RPE Target */}
-          {workout.weekRPE && (
-            <div className="card p-4 mb-6 bg-gradient-to-r from-neon-green/10 to-transparent border-l-4 border-neon-green">
-              <div className="flex items-start gap-3">
-                <Info className="w-5 h-5 text-neon-green shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium text-neon-green text-sm">Week {workout.weekNum} RPE Target: {workout.weekRPE.min}-{workout.weekRPE.max}</h3>
-                  <p className="text-sm text-gray-300 mt-1">{workout.weekRPE.label}</p>
+        </div>
+      )}
+      
+      {/* Rest Timer Settings */}
+      <div className="card p-4 mb-6">
+        <h3 className="text-sm font-medium mb-2 text-gray-300">Rest Timer</h3>
+        <div className="flex gap-2">
+          {[60, 90, 120, 180, 240].map((seconds) => (
+            <button
+              key={seconds}
+              onClick={() => changeRestTimer(seconds)}
+              className={`flex-1 py-1 px-2 rounded text-xs font-medium ${
+                initialTimer === seconds 
+                  ? 'bg-neon-green text-black' 
+                  : 'bg-gray-800 text-gray-300'
+              }`}
+            >
+              {formatTime(seconds)}
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      {/* Exercise List */}
+          <div className="space-y-4 mb-24">
+        {exercises.map((exercise, exerciseIndex) => (
+          <div 
+            key={exercise.id} 
+            className={`card overflow-hidden ${activeExercise === exerciseIndex ? 'border border-neon-green' : ''}`}
+          >
+            {/* Exercise Header */}
+            <div 
+              className="p-4 cursor-pointer"
+              onClick={() => setActiveExercise(activeExercise === exerciseIndex ? null : exerciseIndex)}
+            >
+              <div className="flex justify-between items-center">
+                <h3 className="font-bold">{exercise.name}</h3>
+                <div className="text-sm text-gray-400">
+                  {exercise.sets.length} sets x {exercise.reps} reps
                 </div>
               </div>
-            </div>
-          )}
-          
-          {/* Rest Timer Settings */}
-          <div className="card p-4 mb-6">
-            <h3 className="text-sm font-medium mb-2 text-gray-300">Rest Timer</h3>
-            <div className="flex gap-2">
-              {[60, 90, 120, 180, 240].map((seconds) => (
-                <button
-                  key={seconds}
-                  onClick={() => changeRestTimer(seconds)}
-                  className={`flex-1 py-1 px-2 rounded text-xs font-medium ${
-                    initialTimer === seconds 
-                      ? 'bg-neon-green text-black' 
-                      : 'bg-gray-800 text-gray-300'
-                  }`}
-                >
-                  {formatTime(seconds)}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          {/* Exercise List */}
-          <div className="space-y-4 mb-24">
-            {exercises.map((exercise, exerciseIndex) => (
-              <div 
-                key={exercise.id} 
-                className={`card overflow-hidden ${activeExercise === exerciseIndex ? 'border border-neon-green' : ''}`}
-              >
-                {/* Exercise Header */}
+              
+              {/* Progress bar */}
+              <div className="w-full h-1 bg-gray-800 mt-3 rounded-full overflow-hidden">
                 <div 
-                  className="p-4 cursor-pointer"
-                  onClick={() => setActiveExercise(activeExercise === exerciseIndex ? null : exerciseIndex)}
-                >
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-bold">{exercise.name}</h3>
-                    <div className="text-sm text-gray-400">
-                      {exercise.sets.length} sets x {exercise.reps} reps
-                    </div>
-                  </div>
-                  
-                  {/* Progress bar */}
-                  <div className="w-full h-1 bg-gray-800 mt-3 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-neon-green"
-                      style={{ 
-                        width: `${Math.round(
+                  className="h-full bg-neon-green"
+                  style={{ 
+                    width: `${Math.round(
                             ((exercise.sets && Array.isArray(exercise.sets) && exercise.sets.length > 0)
                               ? (exercise.sets.filter((_: any, i: number) => 
-                            completedSets.has(`${exercise.id}-${exercise.sets[i].id}`)
+                        completedSets.has(`${exercise.id}-${exercise.sets[i].id}`)
                                 ).length / exercise.sets.length)
                               : (exercise.generatedSets && Array.isArray(exercise.generatedSets) && exercise.generatedSets.length > 0)
                                 ? (exercise.generatedSets.filter((_: any, i: number) => 
                                     completedSets.has(`${exercise.id}-${exercise.generatedSets[i].id}`)
                                   ).length / exercise.generatedSets.length)
                                 : 0) * 100
-                        )}%` 
-                      }}
-                    />
+                    )}%` 
+                  }}
+                />
+              </div>
+            </div>
+            
+            {/* Sets (expanded when active) */}
+            {activeExercise === exerciseIndex && (
+              <div className="border-t border-gray-800">
+                <div className="p-4">
+                  <div className="text-xs text-gray-500 flex mb-3">
+                    <div className="w-8 text-center">#</div>
+                    <div className="flex-1 text-center">WEIGHT</div>
+                    <div className="flex-1 text-center">REPS</div>
+                    <div className="w-12 text-center">DONE</div>
                   </div>
-                </div>
-                
-                {/* Sets (expanded when active) */}
-                {activeExercise === exerciseIndex && (
-                  <div className="border-t border-gray-800">
-                    <div className="p-4">
-                      <div className="text-xs text-gray-500 flex mb-3">
-                        <div className="w-8 text-center">#</div>
-                        <div className="flex-1 text-center">WEIGHT</div>
-                        <div className="flex-1 text-center">REPS</div>
-                        <div className="w-12 text-center">DONE</div>
+                  
+                  {exercise.sets.map((set: any, setIndex: number) => (
+                    <div key={set.id} className="flex items-center py-2 border-t border-gray-800/50">
+                      <div className="w-8 text-center text-sm">{set.number || setIndex + 1}</div>
+                      
+                      <div className="flex-1 px-2 flex justify-center">
+                        <input
+                          type="number"
+                          value={set.completedWeight || set.targetWeight || ''}
+                          onChange={(e) => updateSetDetails(
+                            exerciseIndex, 
+                            setIndex, 
+                            'completedWeight', 
+                            e.target.value
+                          )}
+                          className="w-48 bg-gray-800 rounded text-center py-2 focus:ring-1 focus:ring-neon-green outline-none"
+                          min="0"
+                          placeholder={set.targetWeight || "0"}
+                        />
                       </div>
                       
-                      {exercise.sets.map((set: any, setIndex: number) => (
-                        <div key={set.id} className="flex items-center py-2 border-t border-gray-800/50">
-                          <div className="w-8 text-center text-sm">{set.number || setIndex + 1}</div>
-                          
-                          <div className="flex-1 px-2 flex justify-center">
-                            <input
-                              type="number"
-                              value={set.completedWeight || set.targetWeight || ''}
-                              onChange={(e) => updateSetDetails(
-                                exerciseIndex, 
-                                setIndex, 
-                                'completedWeight', 
-                                e.target.value
-                              )}
-                              className="w-48 bg-gray-800 rounded text-center py-2 focus:ring-1 focus:ring-neon-green outline-none"
-                              min="0"
-                              placeholder={set.targetWeight || "0"}
-                            />
-                          </div>
-                          
-                          <div className="flex-1 px-2 flex justify-center">
-                            <input
-                              type="number"
-                              value={set.completedReps || set.targetReps}
-                              onChange={(e) => updateSetDetails(
-                                exerciseIndex, 
-                                setIndex, 
-                                'completedReps', 
-                                e.target.value
-                              )}
-                              className="w-48 bg-gray-800 rounded text-center py-2 focus:ring-1 focus:ring-neon-green outline-none"
-                              min="0"
-                              placeholder="0"
-                            />
-                          </div>
-                          
-                          <div className="w-12 flex justify-center">
-                            <button
-                              onClick={() => toggleSetCompletion(exercise.id, set.id)}
-                              className="w-6 h-6 flex items-center justify-center"
-                            >
-                              {completedSets.has(`${exercise.id}-${set.id}`) ? (
-                                <CheckCircle className="w-5 h-5 text-neon-green" />
-                              ) : (
-                                <Circle className="w-5 h-5 text-gray-600" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                      <div className="flex-1 px-2 flex justify-center">
+                        <input
+                          type="number"
+                          value={set.completedReps || set.targetReps}
+                          onChange={(e) => updateSetDetails(
+                            exerciseIndex, 
+                            setIndex, 
+                            'completedReps', 
+                            e.target.value
+                          )}
+                          className="w-48 bg-gray-800 rounded text-center py-2 focus:ring-1 focus:ring-neon-green outline-none"
+                          min="0"
+                          placeholder="0"
+                        />
+                      </div>
+                      
+                      <div className="w-12 flex justify-center">
+                        <button
+                          onClick={() => toggleSetCompletion(exercise.id, set.id)}
+                          className="w-6 h-6 flex items-center justify-center"
+                        >
+                          {completedSets.has(`${exercise.id}-${set.id}`) ? (
+                            <CheckCircle className="w-5 h-5 text-neon-green" />
+                          ) : (
+                            <Circle className="w-5 h-5 text-gray-600" />
+                          )}
+                        </button>
+                      </div>
                     </div>
-                    
-                    <div className="p-4 border-t border-gray-800 bg-black/30">
-                      <div className="flex justify-between items-center">
-                        <div className="text-sm text-gray-400">
-                          <span className="text-neon-green font-medium">
-                            {exercise.sets.filter((_: any, i: number) => 
-                              completedSets.has(`${exercise.id}-${exercise.sets[i].id}`)
-                            ).length}
-                          </span> / {exercise.sets.length} sets completed
-                        </div>
-                        <div className="flex gap-2">
-                          <button className="btn-secondary py-1 px-3 text-sm">
-                            <Plus className="w-3 h-3 mr-1" /> Add Set
-                          </button>
+                  ))}
+                </div>
+                
+                <div className="p-4 border-t border-gray-800 bg-black/30">
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-gray-400">
+                      <span className="text-neon-green font-medium">
+                        {exercise.sets.filter((_: any, i: number) => 
+                          completedSets.has(`${exercise.id}-${exercise.sets[i].id}`)
+                        ).length}
+                      </span> / {exercise.sets.length} sets completed
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="btn-secondary py-1 px-3 text-sm">
+                        <Plus className="w-3 h-3 mr-1" /> Add Set
+                      </button>
                             <button 
                               className="text-red-500 py-1 px-2 text-sm hover:bg-red-500/10 rounded"
                               onClick={(e) => {
@@ -2092,19 +2092,19 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                                 setDeleteModalOpen(true);
                               }}
                             >
-                            <Trash className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
+                        <Trash className="w-3 h-3" />
+                      </button>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
-            ))}
+            )}
+          </div>
+        ))}
           </div>
         </div>
       </div>
-
+      
       {/* Add Exercise Button - Fixed */}
       <div className="fixed bottom-28 left-0 right-0 px-8">
         <div className="max-w-3xl mx-auto">
@@ -2144,7 +2144,7 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
             <h3 className="text-2xl font-bold mb-2">Rest Timer</h3>
             <div className="text-6xl font-bold text-neon-green mb-6">
               {formatTime(timer)}
-            </div>
+    </div>
             <div className="flex gap-3">
               <button
                 onClick={() => setTimerActive(false)}
