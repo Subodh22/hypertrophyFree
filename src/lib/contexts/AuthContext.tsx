@@ -42,11 +42,43 @@ export function AuthProvider({
     getRedirectResult(auth).then((result) => {
       if (result) {
         console.log('Redirect sign-in successful');
+        // Force a token refresh to ensure we have the latest state
+        result.user.getIdToken(true).then(token => {
+          Cookies.set('firebaseToken', token, { 
+            expires: 30, 
+            path: '/',
+            sameSite: 'lax'
+          });
+          Cookies.set('__session', token, { 
+            expires: 30, 
+            path: '/',
+            sameSite: 'lax'
+          });
+        });
       }
     }).catch((error) => {
       console.error('Error getting redirect result:', error);
       setError(error instanceof Error ? error : new Error('Failed to complete sign in'));
     });
+
+    // Check if there's a pending redirect
+    const pendingRedirect = localStorage.getItem('pendingRedirect');
+    if (pendingRedirect) {
+      localStorage.removeItem('pendingRedirect');
+      // Force a token refresh
+      auth.currentUser?.getIdToken(true).then(token => {
+        Cookies.set('firebaseToken', token, { 
+          expires: 30, 
+          path: '/',
+          sameSite: 'lax'
+        });
+        Cookies.set('__session', token, { 
+          expires: 30, 
+          path: '/',
+          sameSite: 'lax'
+        });
+      });
+    }
 
     const unsubscribe = onAuthStateChanged(
       auth,
@@ -104,6 +136,8 @@ export function AuthProvider({
     setLoading(true);
     try {
       setError(null);
+      // Set a flag to indicate we're expecting a redirect
+      localStorage.setItem('pendingRedirect', 'true');
       const provider = new GoogleAuthProvider();
       await signInWithRedirect(auth, provider);
       // Note: The onAuthStateChanged listener will handle setting the user and cookies
