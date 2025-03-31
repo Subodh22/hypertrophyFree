@@ -4,9 +4,10 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
   onAuthStateChanged, 
-  signInWithPopup, 
+  signInWithRedirect, 
   signOut as firebaseSignOut, 
-  GoogleAuthProvider 
+  GoogleAuthProvider,
+  getRedirectResult
 } from 'firebase/auth';
 import { auth } from '../firebase/firebase';
 import Cookies from 'js-cookie';
@@ -37,6 +38,16 @@ export function AuthProvider({
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    // Handle redirect result
+    getRedirectResult(auth).then((result) => {
+      if (result) {
+        console.log('Redirect sign-in successful');
+      }
+    }).catch((error) => {
+      console.error('Error getting redirect result:', error);
+      setError(error instanceof Error ? error : new Error('Failed to complete sign in'));
+    });
+
     const unsubscribe = onAuthStateChanged(
       auth,
       async (user) => {
@@ -94,11 +105,11 @@ export function AuthProvider({
     try {
       setError(null);
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      await signInWithRedirect(auth, provider);
       // Note: The onAuthStateChanged listener will handle setting the user and cookies
     } catch (error) {
       console.error('Error signing in with Google:', error);
-      setError(error instanceof Error ? error : new Error('Failed to sign in'));
+      setError(error instanceof Error ? error : new Error('Failed to sign in with Google'));
       setLoading(false);
     }
   };
