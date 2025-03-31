@@ -7,7 +7,9 @@ import {
   signInWithRedirect, 
   signOut as firebaseSignOut, 
   GoogleAuthProvider,
-  getRedirectResult
+  getRedirectResult,
+  browserLocalPersistence,
+  setPersistence
 } from 'firebase/auth';
 import { auth } from '../firebase/firebase';
 import Cookies from 'js-cookie';
@@ -38,6 +40,11 @@ export function AuthProvider({
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    // Set persistence to LOCAL to maintain auth state
+    setPersistence(auth, browserLocalPersistence).catch((error) => {
+      console.error('Error setting persistence:', error);
+    });
+
     // Handle redirect result
     getRedirectResult(auth).then((result) => {
       if (result) {
@@ -54,6 +61,10 @@ export function AuthProvider({
             path: '/',
             sameSite: 'lax'
           });
+          setUser(result.user);
+        }).catch(error => {
+          console.error('Error getting ID token:', error);
+          setError(error instanceof Error ? error : new Error('Failed to get ID token'));
         });
       }
     }).catch((error) => {
@@ -128,8 +139,7 @@ export function AuthProvider({
       const provider = new GoogleAuthProvider();
       // Add custom parameters for better mobile experience
       provider.setCustomParameters({
-        prompt: 'select_account',
-        login_hint: 'user@example.com'
+        prompt: 'select_account'
       });
       await signInWithRedirect(auth, provider);
       // Note: The onAuthStateChanged listener will handle setting the user and cookies
