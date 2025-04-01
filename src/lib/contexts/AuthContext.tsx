@@ -4,12 +4,9 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
   onAuthStateChanged, 
-  signInWithRedirect, 
+  signInWithPopup, 
   signOut as firebaseSignOut, 
-  GoogleAuthProvider,
-  getRedirectResult,
-  browserLocalPersistence,
-  setPersistence
+  GoogleAuthProvider 
 } from 'firebase/auth';
 import { auth } from '../firebase/firebase';
 import Cookies from 'js-cookie';
@@ -40,42 +37,6 @@ export function AuthProvider({
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    // Set persistence to LOCAL to maintain auth state
-    setPersistence(auth, browserLocalPersistence).catch((error) => {
-      console.error('Error setting persistence:', error);
-    });
-
-    // Handle redirect result
-    getRedirectResult(auth).then((result) => {
-      if (result) {
-        console.log('Redirect sign-in successful');
-        // Force a token refresh to ensure we have the latest state
-        result.user.getIdToken(true).then(token => {
-          Cookies.set('firebaseToken', token, { 
-            expires: 30, 
-            path: '/',
-            sameSite: 'lax'
-          });
-          Cookies.set('__session', token, { 
-            expires: 30, 
-            path: '/',
-            sameSite: 'lax'
-          });
-          setUser(result.user);
-        }).catch(error => {
-          console.error('Error getting ID token:', error);
-          setError(error instanceof Error ? error : new Error('Failed to get ID token'));
-        });
-      }
-    }).catch((error) => {
-      console.error('Error getting redirect result:', error);
-      setError(error instanceof Error ? error : new Error('Failed to complete sign in'));
-      // Clear any partial state
-      Cookies.remove('firebaseToken', { path: '/' });
-      Cookies.remove('__session', { path: '/' });
-      setUser(null);
-    });
-
     const unsubscribe = onAuthStateChanged(
       auth,
       async (user) => {
@@ -85,7 +46,7 @@ export function AuthProvider({
             setUser(user);
             
             // Get token and set cookies for server-side auth
-            const token = await user.getIdToken(true); // Force refresh
+            const token = await user.getIdToken();
             
             // Set cookie for server middleware
             Cookies.set('firebaseToken', token, { 
@@ -105,10 +66,6 @@ export function AuthProvider({
           } catch (error) {
             console.error('Error setting authentication cookies:', error);
             setError(error instanceof Error ? error : new Error('Authentication error'));
-            // Clear any partial state
-            Cookies.remove('firebaseToken', { path: '/' });
-            Cookies.remove('__session', { path: '/' });
-            setUser(null);
           }
         } else {
           // User is signed out
@@ -137,15 +94,11 @@ export function AuthProvider({
     try {
       setError(null);
       const provider = new GoogleAuthProvider();
-      // Add custom parameters for better mobile experience
-      provider.setCustomParameters({
-        prompt: 'select_account'
-      });
-      await signInWithRedirect(auth, provider);
+      await signInWithPopup(auth, provider);
       // Note: The onAuthStateChanged listener will handle setting the user and cookies
     } catch (error) {
       console.error('Error signing in with Google:', error);
-      setError(error instanceof Error ? error : new Error('Failed to sign in with Google'));
+      setError(error instanceof Error ? error : new Error('Failed to sign in'));
       setLoading(false);
     }
   };
