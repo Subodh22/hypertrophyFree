@@ -32,14 +32,35 @@ function LoginContent() {
         if (elapsed < 10 * 60 * 1000) { // 10 minutes
           setRedirectPending(true);
           console.log('Returning from auth redirect, checking authentication status...');
+          
+          // For mobile PWA, check if we have the return URL stored
+          const storedReturnUrl = localStorage.getItem('authReturnUrl');
+          if (isMobilePwa && storedReturnUrl && storedReturnUrl !== window.location.href) {
+            console.log('Found stored return URL:', storedReturnUrl);
+            
+            // If we're on the login page after a redirect, wait a moment for auth to complete
+            setTimeout(() => {
+              // If we have a user by now, navigate to the dashboard
+              if (user) {
+                router.push('/dashboard');
+              } 
+              // If no user after 1.5 seconds, try to get the redirect result again
+              else {
+                console.log('No user after redirect, attempting to recover session...');
+                // Force another check of authentication state
+                setRedirectPending(false);
+              }
+            }, 1500);
+          }
         } else {
           // Clear old pending redirect flags
           localStorage.removeItem('authRedirectPending');
           localStorage.removeItem('authRedirectTime');
+          localStorage.removeItem('authReturnUrl');
         }
       }
     }
-  }, []);
+  }, [isMobilePwa, user, router]);
   
   // Redirect if already logged in
   useEffect(() => {
@@ -51,6 +72,7 @@ function LoginContent() {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('authRedirectPending');
         localStorage.removeItem('authRedirectTime');
+        localStorage.removeItem('authReturnUrl');
       }
       
       // Add a small delay to ensure state updates before navigation
@@ -66,6 +88,7 @@ function LoginContent() {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('authRedirectPending');
         localStorage.removeItem('authRedirectTime');
+        localStorage.removeItem('authReturnUrl');
       }
     }
   }, [loading, user, router, redirectPath, redirectPending]);
@@ -154,10 +177,19 @@ function LoginContent() {
           {isLoading ? 'Signing in...' : 'Sign in with Google'}
         </button>
 
-        {isPwa && (
+        {isPwa && isMobilePwa && (
+          <div className="w-full bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-6">
+            <p className="text-blue-200 text-sm text-center">
+              You&apos;re using the mobile app.
+              After signing in with Google, you must return to this app to complete login.
+              If Gmail opens, please click &quot;Yes, it&apos;s me&quot; and then return here.
+            </p>
+          </div>
+        )}
+        
+        {isPwa && !isMobilePwa && (
           <p className="text-xs text-gray-400 mb-6 text-center">
-            You&apos;re using the app in {isMobilePwa ? 'mobile' : 'desktop'} PWA mode. 
-            {isMobilePwa ? ' When redirected to Google login, please complete the sign-in and return to this app.' : ''}
+            You&apos;re using the app in desktop PWA mode.
           </p>
         )}
         

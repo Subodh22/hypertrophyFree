@@ -49,6 +49,7 @@ export default function RegisterPage() {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('authRedirectPending');
         localStorage.removeItem('authRedirectTime');
+        localStorage.removeItem('authReturnUrl');
       }
       
       router.push('/dashboard');
@@ -61,6 +62,7 @@ export default function RegisterPage() {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('authRedirectPending');
         localStorage.removeItem('authRedirectTime');
+        localStorage.removeItem('authReturnUrl');
       }
     }
   }, [loading, user, router, redirectPending]);

@@ -41,9 +41,27 @@ const isPwa = () => {
 // Check if mobile device
 const isMobile = () => {
   if (typeof window !== 'undefined') {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    // Check for mobile user agent
+    const mobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       window.navigator.userAgent
     );
+    
+    // Check for mobile screen size (under 768px width is typically mobile)
+    const mobileScreenSize = window.innerWidth < 768;
+    
+    // Check for touch support (most mobile devices support touch)
+    const touchSupport = 'ontouchstart' in window || 
+                         navigator.maxTouchPoints > 0 ||
+                         (navigator as any).msMaxTouchPoints > 0;
+    
+    // Return true if any two of these conditions are met
+    // This improves reliability of detection
+    let mobileIndicators = 0;
+    if (mobileUserAgent) mobileIndicators++;
+    if (mobileScreenSize) mobileIndicators++;
+    if (touchSupport) mobileIndicators++;
+    
+    return mobileIndicators >= 2;
   }
   return false;
 };
@@ -98,12 +116,17 @@ export function AuthProvider({
       try {
         console.log('Checking for redirect result...');
         const result = await getRedirectResult(auth);
+        
+        // Check for a pending auth redirect first
+        const pending = typeof window !== 'undefined' && 
+          localStorage.getItem('authRedirectPending') === 'true';
+          
         if (result && result.user) {
           console.log('Successfully signed in after redirect:', result.user.email);
           
-          // For mobile PWAs, we need to explicitly set the user and token
+          // For any kind of PWA, we need to explicitly set the user and token
           // because onAuthStateChanged might not get triggered right away
-          if (isMobilePwaState) {
+          if (pwaMode) {
             setUser(result.user);
             
             // Set cookies for server-side auth
@@ -128,15 +151,29 @@ export function AuthProvider({
               if (typeof window !== 'undefined') {
                 localStorage.setItem('authUserEmail', result.user.email || '');
                 localStorage.setItem('authUserUid', result.user.uid || '');
+                
+                // Check if we have a stored return URL and navigate to it
+                const returnUrl = localStorage.getItem('authReturnUrl');
+                if (returnUrl && typeof window !== 'undefined') {
+                  console.log('Redirecting to stored return URL:', returnUrl);
+                  window.location.href = returnUrl;
+                }
               }
               
               setLoading(false);
+              
+              // Clear pending flags since we've successfully authenticated
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('authRedirectPending');
+                localStorage.removeItem('authRedirectTime');
+                // Keep authReturnUrl for navigation after redirect
+              }
             } catch (tokenError) {
               console.error('Error setting auth cookies after redirect:', tokenError);
             }
           }
-        } else {
-          console.log('No redirect result found');
+        } else if (pending) {
+          console.log('No redirect result found but redirect was pending...');
           
           // For mobile PWAs, check if we have cached user info that we can use
           // until Firebase auth state catches up
@@ -145,20 +182,40 @@ export function AuthProvider({
             const cachedUid = localStorage.getItem('authUserUid');
             
             if (cachedEmail && cachedUid) {
-              console.log('Using cached authentication data');
-              // Don't set user directly, but we can use this to prevent immediate redirects
-              // The actual user object will be set by onAuthStateChanged later
+              console.log('Using cached authentication data while waiting for redirect result');
+              
+              // We don't have a user object, but we can use the cached info
+              // to know that a user exists and avoid immediate redirects
+              
+              // Retry getting the redirect result after a small delay
+              setTimeout(() => {
+                console.log('Retrying redirect result...');
+                handleRedirectResult();
+              }, 1000);
+            } else {
+              console.log('No cached auth data found, likely not authenticated');
             }
+          } else {
+            console.log('Not in mobile PWA or already have user, pending redirect may be stale');
           }
+        } else {
+          console.log('No redirect result or pending redirect found');
         }
       } catch (error) {
         console.error('Error with redirect sign-in:', error);
         setError(error instanceof Error ? error : new Error('Authentication failed after redirect'));
+        
+        // Clear pending flags on error
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('authRedirectPending');
+          localStorage.removeItem('authRedirectTime');
+          // Keep authReturnUrl for potential retry
+        }
       }
     };
 
     handleRedirectResult();
-  }, [isMobilePwaState, user]);
+  }, [isMobilePwaState, user, pwaMode]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
@@ -247,19 +304,39 @@ export function AuthProvider({
     try {
       setError(null);
       const provider = new GoogleAuthProvider();
-      // Add login hint to reduce the need for user to select account
-      provider.setCustomParameters({
-        prompt: 'select_account'
-      });
       
-      // For mobile PWAs, store a flag in localStorage before redirect
+      // For mobile PWAs, we need a different approach
       if (isMobilePwaState && typeof window !== 'undefined') {
+        console.log('Using mobile PWA specific authentication approach');
+        
+        // Store a flag to indicate an authentication attempt is in progress
         localStorage.setItem('authRedirectPending', 'true');
         localStorage.setItem('authRedirectTime', Date.now().toString());
+        
+        // Store the current URL to return to after authentication
+        const currentUrl = window.location.href;
+        localStorage.setItem('authReturnUrl', currentUrl);
+        
+        // Use persistent credential mode for mobile PWA
+        provider.setCustomParameters({
+          prompt: 'select_account',
+          // This specifically helps with returning to the app
+          auth_type: 'rerequest',
+          // Make sure we're always authenticated
+          access_type: 'offline'
+        });
+        
+        // For mobile devices, we need to use signInWithRedirect
+        await signInWithRedirect(auth, provider);
+      } else {
+        // For desktop or browser, use standard approach
+        provider.setCustomParameters({
+          prompt: 'select_account'
+        });
+        
+        // For desktop PWAs or regular browsers
+        await signInWithRedirect(auth, provider);
       }
-      
-      // Using redirect for PWA environments
-      await signInWithRedirect(auth, provider);
       // The redirect will happen, and getRedirectResult will handle it when the page loads again
     } catch (error) {
       console.error('Error initiating Google sign in with redirect:', error);
@@ -275,6 +352,7 @@ export function AuthProvider({
         localStorage.removeItem('authUserUid');
         localStorage.removeItem('authRedirectPending');
         localStorage.removeItem('authRedirectTime');
+        localStorage.removeItem('authReturnUrl');
       }
       
       await firebaseSignOut(auth);
