@@ -82,20 +82,15 @@ export default function ProfilePage() {
       // Always set loading to false regardless of success/failure
       setIsLoading(false);
     }
-  }, [user, dispatch, preferences, stats]);
+  }, [user, dispatch]); // Remove preferences and stats from dependencies
   
   // User authentication check - with reduced dependencies
   useEffect(() => {
     if (!user) {
       console.log("Redirecting to login from profile page");
       router.push('/login');
-      return;
     }
-    
-    // Load data only once when component mounts or user changes
-    loadUserData();
-    
-  }, [user, router, loadUserData]); // reduced dependencies
+  }, [user, router]); // Only check for authentication
   
   // Calculate profile completion
   useEffect(() => {
@@ -117,28 +112,40 @@ export default function ProfilePage() {
   
   // Save changes to Firestore when preferences or stats change
   const saveUserData = useCallback(async () => {
-    if (user && !isLoading) {
-      try {
-        await setDoc(doc(db, 'users', user.uid), {
-          preferences,
-          stats
-        }, { merge: true });
-      } catch (error) {
-        console.error('Error saving user data:', error);
-      }
+    if (!user || isLoading) return;
+    
+    try {
+      await setDoc(doc(db, 'users', user.uid), {
+        preferences,
+        stats
+      }, { merge: true });
+    } catch (error) {
+      console.error('Error saving user data:', error);
     }
-  }, [preferences, stats, user, isLoading]);
+  }, [user, preferences, stats, isLoading]);
+  
+  // Add a separate state to track if data has been loaded initially
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   
   useEffect(() => {
-    // Skip the initial load
-    if (!isLoading && user) {
+    // Modify the loadUserData effect to set initialDataLoaded
+    if (user && isLoading) {
+      loadUserData().then(() => {
+        setInitialDataLoaded(true);
+      });
+    }
+  }, [user, isLoading, loadUserData]);
+  
+  useEffect(() => {
+    // Only save data if it's not the initial load and user exists
+    if (initialDataLoaded && user && !isLoading) {
       const timeoutId = setTimeout(() => {
         saveUserData();
       }, 1000); // Debounce to avoid too many writes
       
       return () => clearTimeout(timeoutId);
     }
-  }, [preferences, stats, isLoading, user, saveUserData]);
+  }, [preferences, stats, initialDataLoaded, user, isLoading, saveUserData]);
   
   const handleToggleTheme = () => {
     const newTheme = preferences.theme === 'dark' ? 'light' : 'dark';
