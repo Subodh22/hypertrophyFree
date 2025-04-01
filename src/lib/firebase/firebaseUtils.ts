@@ -2,7 +2,7 @@ import { auth, db, storage } from "./firebase";
 import {
   signOut,
   GoogleAuthProvider,
-  signInWithRedirect,
+  signInWithPopup,
 } from "firebase/auth";
 import {
   collection,
@@ -20,10 +20,10 @@ export const logoutUser = () => signOut(auth);
 export const signInWithGoogle = async () => {
   const provider = new GoogleAuthProvider();
   try {
-    await signInWithRedirect(auth, provider);
-    // The redirect result will be handled by the AuthContext
+    const result = await signInWithPopup(auth, provider);
+    return result.user;
   } catch (error) {
-    console.error("Error initiating Google sign in", error);
+    console.error("Error signing in with Google", error);
     throw error;
   }
 };

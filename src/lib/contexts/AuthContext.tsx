@@ -4,8 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
   onAuthStateChanged, 
-  signInWithRedirect, 
-  getRedirectResult,
+  signInWithPopup, 
   signOut as firebaseSignOut, 
   GoogleAuthProvider 
 } from 'firebase/auth';
@@ -36,19 +35,6 @@ export function AuthProvider({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    // Handle redirect result when the component mounts
-    getRedirectResult(auth).then((result) => {
-      if (result) {
-        console.log('Redirect sign-in successful');
-        // The onAuthStateChanged listener will handle setting the user and cookies
-      }
-    }).catch((error) => {
-      console.error('Error getting redirect result:', error);
-      setError(error instanceof Error ? error : new Error('Failed to complete sign in'));
-    });
-  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
@@ -108,11 +94,11 @@ export function AuthProvider({
     try {
       setError(null);
       const provider = new GoogleAuthProvider();
-      await signInWithRedirect(auth, provider);
-      // Note: The redirect result will be handled by the useEffect above
+      await signInWithPopup(auth, provider);
+      // Note: The onAuthStateChanged listener will handle setting the user and cookies
     } catch (error) {
-      console.error('Error initiating Google sign in:', error);
-      setError(error instanceof Error ? error : new Error('Failed to initiate sign in'));
+      console.error('Error signing in with Google:', error);
+      setError(error instanceof Error ? error : new Error('Failed to sign in'));
       setLoading(false);
     }
   };
