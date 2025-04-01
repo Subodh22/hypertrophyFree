@@ -299,7 +299,7 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
         setTimer(newTime);
         
         if (newTime === 0) {
-          setTimerActive(false);
+      setTimerActive(false);
           clearInterval(interval);
           
           // Play sound when timer completes
@@ -696,7 +696,11 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
       muscleGroups
     });
     
+    // Directly show the survey without checking if all sets are completed
     setShowSurvey(true);
+    
+    // Log that the survey is being displayed
+    console.log("⭐ Workout feedback survey is now being displayed");
   };
   
   // Update feedback for a specific muscle group
@@ -2267,13 +2271,13 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
       {/* Action Buttons - Non-Fixed */}
       <div className="p-4 mt-4 mb-24 bg-black">
         <div className="flex gap-2 max-w-md mx-auto">
-          <button
+          <button 
             onClick={() => router.back()}
             className="w-full py-3 px-4 rounded-md bg-gray-800 text-white font-medium hover:bg-gray-700 transition-colors"
           >
             Cancel
           </button>
-          <button
+          <button 
             onClick={initiateSurvey}
             className="w-full py-3 px-4 rounded-md bg-neon-green text-black font-medium hover:bg-neon-green/90 transition-colors"
           >
