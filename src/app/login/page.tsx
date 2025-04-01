@@ -116,6 +116,23 @@ function LoginContent() {
     }
   };
   
+  // For mobile users encountering issues, provide a direct popup option
+  const handleDirectPopupLogin = async () => {
+    setError(null);
+    setIsLoading(true);
+    
+    try {
+      console.log("Using direct popup sign-in method for mobile");
+      await signInWithGoogle();
+      console.log("Google sign-in successful");
+      // The redirect will happen automatically due to the useEffect above
+    } catch (error: any) {
+      console.error("Error during direct sign in:", error);
+      setError("Failed to sign in with Google. Please try again with the standard login button.");
+      setIsLoading(false);
+    }
+  };
+  
   // Loading state
   if (loading || isRedirecting || redirectPending) {
     return (
@@ -178,13 +195,32 @@ function LoginContent() {
         </button>
 
         {isPwa && isMobilePwa && (
-          <div className="w-full bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-6">
-            <p className="text-blue-200 text-sm text-center">
-              You&apos;re using the mobile app.
-              After signing in with Google, you must return to this app to complete login.
-              If Gmail opens, please click &quot;Yes, it&apos;s me&quot; and then return here.
-            </p>
-          </div>
+          <>
+            <div className="w-full bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-6">
+              <p className="text-blue-200 text-sm text-center">
+                You&apos;re using the mobile app. We&apos;ll try to keep you in the app during sign-in.
+                If you&apos;re redirected to Gmail, please complete the verification and return to this app.
+              </p>
+              <p className="text-blue-200 text-sm mt-2 text-center">
+                <strong>Tip:</strong> After clicking &quot;Yes, it&apos;s me&quot; in Gmail, look for a 
+                &quot;Back to app&quot; or browser back button to return here.
+              </p>
+            </div>
+            
+            <div className="w-full my-4 text-center">
+              <p className="text-xs text-gray-400 mb-2">Having trouble logging in?</p>
+              <button
+                onClick={handleDirectPopupLogin}
+                disabled={isLoading}
+                className="bg-transparent border border-neon-green text-neon-green py-2 px-4 rounded-md text-sm hover:bg-neon-green/10 transition-colors"
+              >
+                Try Direct Login
+              </button>
+              <p className="text-xs text-gray-500 mt-2">
+                This alternative method may work better on some mobile devices.
+              </p>
+            </div>
+          </>
         )}
         
         {isPwa && !isMobilePwa && (

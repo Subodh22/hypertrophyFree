@@ -305,29 +305,64 @@ export function AuthProvider({
       setError(null);
       const provider = new GoogleAuthProvider();
       
-      // For mobile PWAs, we need a different approach
+      // For mobile PWAs, we need a completely different approach
       if (isMobilePwaState && typeof window !== 'undefined') {
-        console.log('Using mobile PWA specific authentication approach');
+        console.log('Using mobile PWA direct authentication approach');
         
-        // Store a flag to indicate an authentication attempt is in progress
-        localStorage.setItem('authRedirectPending', 'true');
-        localStorage.setItem('authRedirectTime', Date.now().toString());
-        
-        // Store the current URL to return to after authentication
-        const currentUrl = window.location.href;
-        localStorage.setItem('authReturnUrl', currentUrl);
-        
-        // Use persistent credential mode for mobile PWA
-        provider.setCustomParameters({
-          prompt: 'select_account',
-          // This specifically helps with returning to the app
-          auth_type: 'rerequest',
-          // Make sure we're always authenticated
-          access_type: 'offline'
-        });
-        
-        // For mobile devices, we need to use signInWithRedirect
-        await signInWithRedirect(auth, provider);
+        // Create a popup window for authentication
+        // This is a different approach that keeps the user in the same context
+        try {
+          const result = await signInWithPopup(auth, provider);
+          if (result && result.user) {
+            console.log('Successfully signed in with popup in PWA context');
+            setUser(result.user);
+            
+            // Get token and set cookies and localStorage
+            try {
+              const token = await result.user.getIdToken();
+              Cookies.set('firebaseToken', token, { expires: 30, path: '/', sameSite: 'lax' });
+              Cookies.set('__session', token, { expires: 30, path: '/', sameSite: 'lax' });
+              
+              localStorage.setItem('authUserEmail', result.user.email || '');
+              localStorage.setItem('authUserUid', result.user.uid || '');
+              
+              setLoading(false);
+            } catch (tokenError) {
+              console.error('Error setting auth data after popup:', tokenError);
+            }
+          }
+        } catch (popupError) {
+          console.error('Error with popup sign-in, falling back to redirect:', popupError);
+          
+          // If popup fails (which it might on some browsers), fall back to redirect
+          // with extra information to help with return navigation
+          localStorage.setItem('authRedirectPending', 'true');
+          localStorage.setItem('authRedirectTime', Date.now().toString());
+          
+          // Store the current URL to return to after authentication
+          const currentUrl = window.location.href;
+          localStorage.setItem('authReturnUrl', currentUrl);
+          
+          // Try to open the auth page in the system browser instead
+          // This creates a more native experience for returning
+          try {
+            const currentUrl = window.location.href;
+            localStorage.setItem('authReturnUrl', currentUrl);
+            
+            // Create a simple redirect URL that will be handled by the system browser
+            provider.setCustomParameters({
+              prompt: 'select_account',
+              auth_type: 'rerequest',
+              access_type: 'offline'
+            });
+            
+            // Use regular redirect as a fallback
+            await signInWithRedirect(auth, provider);
+          } catch (redirectError) {
+            console.error('Error initiating fallback redirect:', redirectError);
+            setError(redirectError instanceof Error ? redirectError : new Error('Failed to initiate sign in'));
+          }
+        }
       } else {
         // For desktop or browser, use standard approach
         provider.setCustomParameters({
@@ -337,9 +372,8 @@ export function AuthProvider({
         // For desktop PWAs or regular browsers
         await signInWithRedirect(auth, provider);
       }
-      // The redirect will happen, and getRedirectResult will handle it when the page loads again
     } catch (error) {
-      console.error('Error initiating Google sign in with redirect:', error);
+      console.error('Error initiating Google sign in:', error);
       setError(error instanceof Error ? error : new Error('Failed to initiate sign in'));
     }
   };
