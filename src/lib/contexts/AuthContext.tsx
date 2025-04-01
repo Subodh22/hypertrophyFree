@@ -156,7 +156,11 @@ export function AuthProvider({
                 const returnUrl = localStorage.getItem('authReturnUrl');
                 if (returnUrl && typeof window !== 'undefined') {
                   console.log('Redirecting to stored return URL:', returnUrl);
-                  window.location.href = returnUrl;
+                  // Replace with absolute dashboard URL
+                  window.location.href = 'https://hypertrophy-free.vercel.app/dashboard';
+                } else {
+                  // If no specific return URL, redirect to dashboard
+                  window.location.href = 'https://hypertrophy-free.vercel.app/dashboard';
                 }
               }
               

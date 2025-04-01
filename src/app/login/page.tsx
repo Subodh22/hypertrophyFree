@@ -75,9 +75,13 @@ function LoginContent() {
         localStorage.removeItem('authReturnUrl');
       }
       
+      // Use absolute URL for dashboard instead of relative path
+      const dashboardUrl = 'https://hypertrophy-free.vercel.app/dashboard';
+      
       // Add a small delay to ensure state updates before navigation
       setTimeout(() => {
-        router.push(redirectPath);
+        // Use window.location for absolute URLs
+        window.location.href = dashboardUrl;
       }, 100);
     } else if (!loading && redirectPending) {
       // If we were pending a redirect but now we know we're not logged in
@@ -125,7 +129,11 @@ function LoginContent() {
       console.log("Using direct popup sign-in method for mobile");
       await signInWithGoogle();
       console.log("Google sign-in successful");
-      // The redirect will happen automatically due to the useEffect above
+      
+      // Redirect to absolute dashboard URL
+      setTimeout(() => {
+        window.location.href = 'https://hypertrophy-free.vercel.app/dashboard';
+      }, 500);
     } catch (error: any) {
       console.error("Error during direct sign in:", error);
       setError("Failed to sign in with Google. Please try again with the standard login button.");
