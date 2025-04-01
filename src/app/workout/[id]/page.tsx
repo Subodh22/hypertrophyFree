@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { RootState } from '@/lib/store';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase';
+import { isPwa } from '@/lib/firebase/firebaseUtils';
 import { 
   ArrowLeft, 
   Check, 
@@ -54,10 +55,54 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
   // Audio reference for timer completion sound
   const timerAudioRef = useRef<HTMLAudioElement | null>(null);
   
+  // Function to show notifications using Service Worker when available
+  const showNotificationWithServiceWorker = (title: string, options: any) => {
+    // Try to use service worker for notifications first (better for background support)
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'SHOW_NOTIFICATION',
+        title,
+        options: {
+          ...options,
+          data: {
+            ...options.data,
+            url: window.location.href, // Pass current URL to open if notification is clicked
+          }
+        }
+      });
+      console.log('Sent notification request to service worker');
+      return true;
+    } 
+    
+    // Fallback to regular web notifications
+    else if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        const notification = new Notification(title, options);
+        console.log('Showed notification using Web Notifications API');
+        return true;
+      } catch (e) {
+        console.error('Error showing notification:', e);
+        return false;
+      }
+    }
+    
+    return false;
+  };
+  
   // Initialize audio element
   useEffect(() => {
     if (typeof window !== 'undefined') {
       timerAudioRef.current = new Audio('/sounds/timer-complete.mp3');
+      
+      // Request notification permission if not already granted or denied
+      if (isPwa() && 'Notification' in window && Notification.permission === 'default') {
+        // Slight delay to not overwhelm the user on first load
+        setTimeout(() => {
+          Notification.requestPermission().then(permission => {
+            console.log(`Notification permission: ${permission}`);
+          });
+        }, 2000);
+      }
     }
     
     // Try to load sound preferences from localStorage
@@ -249,6 +294,16 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
         lastVisibilityChange = Date.now();
         // Clear the interval when hidden as it may be throttled
         clearInterval(interval);
+        
+        // For PWA: Try to register the current state with service worker before app goes to background
+        if (isPwa() && timer > 0 && timerActive) {
+          // Store timer state in localStorage for recovery
+          localStorage.setItem('workout_timer_active', 'true');
+          localStorage.setItem('workout_timer_start', startTime.toString());
+          localStorage.setItem('workout_timer_initial', initialTimer.toString());
+          localStorage.setItem('workout_timer_value', timer.toString());
+          localStorage.setItem('workout_timer_background_time', Date.now().toString());
+        }
       } else {
         // App coming back to foreground
         if (lastVisibilityChange && timerActive && timer > 0) {
@@ -262,27 +317,64 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
           // If timer should have expired while in background
           if (newTime === 0) {
             setTimerActive(false);
-            // Play sound when timer completes
+            // Play completion sound even if it finished in background
             if (soundEnabled && timerAudioRef.current) {
               timerAudioRef.current.play().catch(e => console.error("Error playing timer sound:", e));
-              
-              // Try to show notification
-              if ('Notification' in window) {
-                if (Notification.permission === 'granted') {
-                  const notification = new Notification('Rest Timer Complete', {
-                    body: 'Time to start your next set!',
-                    icon: '/icons/icon-192x192.png'
-                  });
-                } else if (Notification.permission !== 'denied') {
-                  Notification.requestPermission();
-                }
-              }
             }
+            
+            // Show notification using service worker (better for mobile PWA)
+            showNotificationWithServiceWorker('Rest Timer Complete', {
+              body: 'Time to start your next set!',
+              icon: '/icons/icon-192x192.png',
+              vibrate: [200, 100, 200],
+              tag: 'workout-timer',
+              requireInteraction: false
+            });
           } else {
             // Restart the interval
             startTime = Date.now();
             elapsedPausedTime = 0;
             startInterval();
+          }
+        }
+        
+        // Check for recovery from PWA background state
+        if (isPwa()) {
+          try {
+            const wasTimerActive = localStorage.getItem('workout_timer_active') === 'true';
+            const storedBackgroundTime = localStorage.getItem('workout_timer_background_time');
+            
+            if (wasTimerActive && storedBackgroundTime && !timerActive) {
+              const backgroundTimestamp = parseInt(storedBackgroundTime);
+              const elapsedSinceBackground = Math.floor((Date.now() - backgroundTimestamp) / 1000);
+              const storedTimer = parseInt(localStorage.getItem('workout_timer_value') || '0');
+              const newTimer = Math.max(0, storedTimer - elapsedSinceBackground);
+              
+              // Only recover if it's been less than 5 minutes
+              if ((Date.now() - backgroundTimestamp) < 5 * 60 * 1000) {
+                if (newTimer <= 0) {
+                  // Timer completed while in background
+                  if (soundEnabled && timerAudioRef.current) {
+                    timerAudioRef.current.play().catch(e => console.error("Error playing timer sound:", e));
+                  }
+                } else {
+                  // Resume timer with adjusted time
+                  setTimer(newTimer);
+                  setTimerActive(true);
+                  startTime = Date.now();
+                  elapsedPausedTime = 0;
+                  startInterval();
+                }
+              }
+            }
+            
+            // Clear stored timer state
+            localStorage.removeItem('workout_timer_active');
+            localStorage.removeItem('workout_timer_start');
+            localStorage.removeItem('workout_timer_value');
+            localStorage.removeItem('workout_timer_background_time');
+          } catch (e) {
+            console.error('Error recovering timer state:', e);
           }
         }
       }
@@ -299,25 +391,22 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
         setTimer(newTime);
         
         if (newTime === 0) {
-      setTimerActive(false);
+          setTimerActive(false);
           clearInterval(interval);
           
           // Play sound when timer completes
           if (soundEnabled && timerAudioRef.current) {
             timerAudioRef.current.play().catch(e => console.error("Error playing timer sound:", e));
-            
-            // Try to show notification
-            if ('Notification' in window) {
-              if (Notification.permission === 'granted') {
-                const notification = new Notification('Rest Timer Complete', {
-                  body: 'Time to start your next set!',
-                  icon: '/icons/icon-192x192.png'
-                });
-              } else if (Notification.permission !== 'denied') {
-                Notification.requestPermission();
-              }
-            }
           }
+          
+          // Show notification using service worker (better for mobile PWA)
+          showNotificationWithServiceWorker('Rest Timer Complete', {
+            body: 'Time to start your next set!',
+            icon: '/icons/icon-192x192.png',
+            vibrate: [200, 100, 200],
+            tag: 'workout-timer',
+            requireInteraction: false
+          });
         }
       }, 100); // Check more frequently for accuracy
     };
@@ -339,7 +428,7 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [timerActive, timer, soundEnabled]);
+  }, [timerActive, timer, soundEnabled, initialTimer]);
   
   // Format time from seconds to MM:SS
   const formatTime = (seconds: number) => {
@@ -696,11 +785,7 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
       muscleGroups
     });
     
-    // Directly show the survey without checking if all sets are completed
     setShowSurvey(true);
-    
-    // Log that the survey is being displayed
-    console.log("⭐ Workout feedback survey is now being displayed");
   };
   
   // Update feedback for a specific muscle group

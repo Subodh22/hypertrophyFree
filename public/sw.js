@@ -12,6 +12,7 @@ const urlsToCache = [
   '/icons/icon-512x512.png'
 ];
 
+// Install event - cache assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -19,8 +20,12 @@ self.addEventListener('install', (event) => {
         return cache.addAll(urlsToCache);
       })
   );
+  
+  // Force the waiting service worker to become the active service worker
+  self.skipWaiting();
 });
 
+// Fetch event - serve from cache or network
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
@@ -60,6 +65,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
@@ -71,6 +77,56 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
+    })
+  );
+  
+  // Make sure the service worker takes control of all clients immediately
+  event.waitUntil(self.clients.claim());
+});
+
+// Message event - handle messages from client
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, options } = event.data;
+    
+    self.registration.showNotification(title, {
+      body: options.body || 'Notification from Workout App',
+      icon: options.icon || '/icons/icon-192x192.png',
+      badge: '/icons/notification-badge.png',
+      vibrate: options.vibrate || [200, 100, 200],
+      tag: options.tag || 'workout-timer',
+      requireInteraction: options.requireInteraction || false,
+      renotify: options.renotify || false,
+      silent: options.silent || false,
+      actions: options.actions || [],
+      data: options.data || {}
+    }).then(() => {
+      console.log('Notification shown successfully');
+    }).catch(error => {
+      console.error('Error showing notification:', error);
+    });
+  }
+});
+
+// Notification click event
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  
+  // Focus on or open the workout page when notification is clicked
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then(clientList => {
+      // Try to find an existing window/tab
+      for (const client of clientList) {
+        if (client.url.includes('/workout/') && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      
+      // If no existing window found, open a new one
+      if (self.clients.openWindow) {
+        const url = event.notification.data?.url || '/dashboard';
+        return self.clients.openWindow(url);
+      }
     })
   );
 }); 
