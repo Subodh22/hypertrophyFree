@@ -12,7 +12,7 @@ function LoginContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   
-  const { user, loading, signInWithGoogle } = useAuth();
+  const { user, loading, signInWithGoogle, signInWithGoogleRedirect, isPwa } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   // Fix the redirect parameter handling to properly decode the URL
@@ -37,9 +37,17 @@ function LoginContent() {
     setIsLoading(true);
     
     try {
-      await signInWithGoogle();
-      console.log("Google sign-in successful");
-      // The redirect will happen automatically due to the useEffect above
+      // Use the appropriate sign-in method based on whether we're in PWA mode
+      if (isPwa) {
+        console.log("Using redirect sign-in method for PWA");
+        await signInWithGoogleRedirect();
+        // The page will redirect, no need to handle success here
+      } else {
+        console.log("Using popup sign-in method for browser");
+        await signInWithGoogle();
+        console.log("Google sign-in successful");
+        // The redirect will happen automatically due to the useEffect above
+      }
     } catch (error: any) {
       console.error("Error during sign in:", error);
       setError("Failed to sign in with Google. Please try again.");
@@ -101,6 +109,12 @@ function LoginContent() {
           </svg>
           {isLoading ? 'Signing in...' : 'Sign in with Google'}
         </button>
+
+        {isPwa && (
+          <p className="text-xs text-gray-400 mb-6 text-center">
+            You&apos;re using the app in PWA mode. You&apos;ll be redirected to sign in with Google.
+          </p>
+        )}
         
         <div className="w-full border-t border-gray-800 pt-6 mt-2 text-center">
           <p className="text-sm text-gray-400">

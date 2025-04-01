@@ -4,9 +4,11 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
   onAuthStateChanged, 
-  signInWithPopup, 
-  signOut as firebaseSignOut, 
-  GoogleAuthProvider 
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  GoogleAuthProvider,
+  signOut as firebaseSignOut
 } from 'firebase/auth';
 import { auth } from '../firebase/firebase';
 import Cookies from 'js-cookie';
@@ -16,15 +18,30 @@ interface AuthContextType {
   loading: boolean;
   error: Error | null;
   signInWithGoogle: () => Promise<void>;
+  signInWithGoogleRedirect: () => Promise<void>;
   signOut: () => Promise<void>;
+  isPwa: boolean;
 }
+
+// Check if running in PWA mode
+const isPwa = () => {
+  if (typeof window !== 'undefined') {
+    return window.matchMedia('(display-mode: standalone)').matches || 
+           window.matchMedia('(display-mode: fullscreen)').matches ||
+           // Handle iOS standalone mode
+           (window.navigator as any).standalone === true;
+  }
+  return false;
+};
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   error: null,
   signInWithGoogle: async () => {},
+  signInWithGoogleRedirect: async () => {},
   signOut: async () => {},
+  isPwa: false
 });
 
 export function AuthProvider({ 
@@ -35,6 +52,25 @@ export function AuthProvider({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [pwaMode] = useState(isPwa());
+
+  // Check for redirect result when the app starts (especially important for PWA)
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result && result.user) {
+          console.log('Successfully signed in after redirect');
+          // The onAuthStateChanged listener will handle the rest
+        }
+      } catch (error) {
+        console.error('Error with redirect sign-in:', error);
+        setError(error instanceof Error ? error : new Error('Authentication failed after redirect'));
+      }
+    };
+
+    handleRedirectResult();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
@@ -103,6 +139,19 @@ export function AuthProvider({
     }
   };
 
+  const signInWithGoogleRedirect = async () => {
+    try {
+      setError(null);
+      const provider = new GoogleAuthProvider();
+      // Using redirect for PWA environments
+      await signInWithRedirect(auth, provider);
+      // The redirect will happen, and getRedirectResult will handle it when the page loads again
+    } catch (error) {
+      console.error('Error initiating Google sign in with redirect:', error);
+      setError(error instanceof Error ? error : new Error('Failed to initiate sign in'));
+    }
+  };
+
   const signOut = async () => {
     try {
       await firebaseSignOut(auth);
@@ -120,7 +169,9 @@ export function AuthProvider({
         loading,
         error,
         signInWithGoogle,
+        signInWithGoogleRedirect,
         signOut,
+        isPwa: pwaMode
       }}
     >
       {children}

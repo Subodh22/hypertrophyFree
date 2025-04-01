@@ -3,6 +3,8 @@ import {
   signOut,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult
 } from "firebase/auth";
 import {
   collection,
@@ -14,6 +16,16 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
+// Check if running in PWA mode
+export const isPwa = () => {
+  if (typeof window !== 'undefined') {
+    return window.matchMedia('(display-mode: standalone)').matches || 
+           window.matchMedia('(display-mode: fullscreen)').matches ||
+           (window.navigator as any).standalone === true;
+  }
+  return false;
+};
+
 // Auth functions
 export const logoutUser = () => signOut(auth);
 
@@ -24,6 +36,27 @@ export const signInWithGoogle = async () => {
     return result.user;
   } catch (error) {
     console.error("Error signing in with Google", error);
+    throw error;
+  }
+};
+
+export const signInWithGoogleRedirect = async () => {
+  const provider = new GoogleAuthProvider();
+  try {
+    await signInWithRedirect(auth, provider);
+    // No return as this will redirect the page
+  } catch (error) {
+    console.error("Error initiating sign in with redirect", error);
+    throw error;
+  }
+};
+
+export const getGoogleRedirectResult = async () => {
+  try {
+    const result = await getRedirectResult(auth);
+    return result?.user || null;
+  } catch (error) {
+    console.error("Error getting redirect result", error);
     throw error;
   }
 };
