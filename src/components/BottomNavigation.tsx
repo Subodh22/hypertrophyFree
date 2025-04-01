@@ -31,8 +31,8 @@ export default function BottomNavigation() {
   ];
 
   return (
-    <div className="md:hidden fixed bottom-6 left-0 right-0 mx-auto w-11/12 max-w-md bg-black border border-neon-green/20 rounded-xl shadow-lg z-50">
-      <nav className="flex justify-around items-center h-16 px-4">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 mx-auto w-screen bg-black border border-neon-green/20 shadow-lg z-50">
+      <nav className="flex justify-around items-center p-2  ">
         {navItems.map((item) => {
           const isActive = 
             pathname === item.href || 

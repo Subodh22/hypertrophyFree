@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -23,7 +23,9 @@ import {
   Plus, 
   Trash, 
   AlertTriangle,
-  Dumbbell
+  Dumbbell,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Modal } from "@/components/ui/Modal";
@@ -47,6 +49,30 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
   const [timerActive, setTimerActive] = useState(false);
   const [timer, setTimer] = useState(90); // Default rest timer in seconds
   const [initialTimer, setInitialTimer] = useState(90);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  
+  // Audio reference for timer completion sound
+  const timerAudioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Initialize audio element
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      timerAudioRef.current = new Audio('/sounds/timer-complete.mp3');
+    }
+    
+    // Try to load sound preferences from localStorage
+    const savedSound = localStorage.getItem('workoutTimerSound');
+    if (savedSound !== null) {
+      setSoundEnabled(savedSound === 'true');
+    }
+    
+    return () => {
+      if (timerAudioRef.current) {
+        timerAudioRef.current.pause();
+        timerAudioRef.current = null;
+      }
+    };
+  }, []);
   
   // Feedback survey states
   const [showSurvey, setShowSurvey] = useState(false);
@@ -212,17 +238,108 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
   // Timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
+    let startTime: number;
+    let lastVisibilityChange: number;
+    let elapsedPausedTime: number = 0;
+    
+    // Track visibility changes to handle background timer
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        // App going to background - store current time
+        lastVisibilityChange = Date.now();
+        // Clear the interval when hidden as it may be throttled
+        clearInterval(interval);
+      } else {
+        // App coming back to foreground
+        if (lastVisibilityChange && timerActive && timer > 0) {
+          // Calculate time spent in background
+          const timeInBackground = Math.floor((Date.now() - lastVisibilityChange) / 1000);
+          
+          // Update timer considering background time
+          const newTime = Math.max(0, timer - timeInBackground);
+          setTimer(newTime);
+          
+          // If timer should have expired while in background
+          if (newTime === 0) {
+            setTimerActive(false);
+            // Play sound when timer completes
+            if (soundEnabled && timerAudioRef.current) {
+              timerAudioRef.current.play().catch(e => console.error("Error playing timer sound:", e));
+              
+              // Try to show notification
+              if ('Notification' in window) {
+                if (Notification.permission === 'granted') {
+                  const notification = new Notification('Rest Timer Complete', {
+                    body: 'Time to start your next set!',
+                    icon: '/icons/icon-192x192.png'
+                  });
+                } else if (Notification.permission !== 'denied') {
+                  Notification.requestPermission();
+                }
+              }
+            }
+          } else {
+            // Restart the interval
+            startTime = Date.now();
+            elapsedPausedTime = 0;
+            startInterval();
+          }
+        }
+      }
+    };
+    
+    // Start interval function for consistent reference
+    const startInterval = () => {
+      clearInterval(interval);
+      interval = setInterval(() => {
+        const now = Date.now();
+        const elapsed = Math.floor((now - startTime - elapsedPausedTime) / 1000);
+        const newTime = Math.max(0, timer - elapsed);
+        
+        setTimer(newTime);
+        
+        if (newTime === 0) {
+          setTimerActive(false);
+          clearInterval(interval);
+          
+          // Play sound when timer completes
+          if (soundEnabled && timerAudioRef.current) {
+            timerAudioRef.current.play().catch(e => console.error("Error playing timer sound:", e));
+            
+            // Try to show notification
+            if ('Notification' in window) {
+              if (Notification.permission === 'granted') {
+                const notification = new Notification('Rest Timer Complete', {
+                  body: 'Time to start your next set!',
+                  icon: '/icons/icon-192x192.png'
+                });
+              } else if (Notification.permission !== 'denied') {
+                Notification.requestPermission();
+              }
+            }
+          }
+        }
+      }, 100); // Check more frequently for accuracy
+    };
     
     if (timerActive && timer > 0) {
-      interval = setInterval(() => {
-        setTimer((prev) => prev - 1);
-      }, 1000);
-    } else if (timer === 0) {
-      setTimerActive(false);
+      // Add visibility change listener
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      
+      // Initialize start time
+      startTime = Date.now();
+      lastVisibilityChange = 0;
+      elapsedPausedTime = 0;
+      
+      // Start the timer
+      startInterval();
     }
     
-    return () => clearInterval(interval);
-  }, [timerActive, timer]);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [timerActive, timer, soundEnabled]);
   
   // Format time from seconds to MM:SS
   const formatTime = (seconds: number) => {
@@ -243,6 +360,15 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
     } else {
       // If we're checking a set (marking it as completed)
       newCompletedSets.add(uniqueId);
+      
+      // Request notification permission when user completes first set
+      if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+          console.log(`Notification permission ${permission}`);
+        }).catch(error => {
+          console.error('Error requesting notification permission:', error);
+        });
+      }
       
       // Find the exercise and set in our data
       const exerciseIndex = exercises.findIndex(ex => ex.id === exerciseId);
@@ -1462,6 +1588,19 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
     setTimer(seconds);
   };
   
+  // Toggle sound setting
+  const toggleSound = () => {
+    const newSetting = !soundEnabled;
+    setSoundEnabled(newSetting);
+    // Save to localStorage
+    localStorage.setItem('workoutTimerSound', newSetting.toString());
+    toast(newSetting ? 'Timer sound enabled' : 'Timer sound disabled', { 
+      icon: newSetting ? '🔊' : '🔇',
+      position: 'bottom-center',
+      duration: 1500
+    });
+  };
+  
   // Function to handle deleting an exercise from a single workout
   const deleteExercise = (exerciseIndex: number) => {
     if (!workout || !currentMesocycle) return;
@@ -1932,6 +2071,13 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
           >
             {timerActive ? <X className="w-4 h-4" /> : <Play className="w-4 h-4" />}
           </button>
+          <button 
+            onClick={toggleSound}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800"
+            aria-label={soundEnabled ? "Disable timer sound" : "Enable timer sound"}
+          >
+            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </button>
         </div>
       </div>
       
@@ -1969,7 +2115,7 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
       </div>
       
       {/* Exercise List */}
-          <div className="space-y-4 mb-24">
+          <div className="space-y-4  ">
         {exercises.map((exercise, exerciseIndex) => (
           <div 
             key={exercise.id} 
@@ -2105,8 +2251,8 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
         </div>
       </div>
       
-      {/* Add Exercise Button - Fixed */}
-      <div className="fixed bottom-28 left-0 right-0 px-8">
+      {/* Add Exercise Button - Non-Fixed */}
+      <div className="px-8 ">
         <div className="max-w-3xl mx-auto">
           <button
             onClick={() => setAddExerciseModalOpen(true)}
@@ -2118,20 +2264,23 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
         </div>
       </div>
 
-      {/* Action Buttons - Fixed */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-black/80 backdrop-blur-sm border-t border-gray-800">
-        <div className="max-w-3xl mx-auto flex justify-between gap-4">
-          <button 
+      {/* Action Buttons - Non-Fixed */}
+      <div className="p-4 mt-4 mb-24 bg-black">
+        <div className="flex gap-2 max-w-md mx-auto">
+          <button
             onClick={() => router.back()}
-            className="btn-secondary flex-1 py-3"
+            className="w-full py-3 px-4 rounded-md bg-gray-800 text-white font-medium hover:bg-gray-700 transition-colors"
           >
             Cancel
           </button>
-          <button 
+          <button
             onClick={initiateSurvey}
-            className="btn-primary flex-1 py-3 flex items-center justify-center gap-2"
+            className="w-full py-3 px-4 rounded-md bg-neon-green text-black font-medium hover:bg-neon-green/90 transition-colors"
           >
-            <CheckCircle className="w-4 h-4" /> Complete Workout
+            <span className="flex items-center justify-center">
+              <Check className="w-5 h-5 mr-2" />
+              Complete Workout
+            </span>
           </button>
         </div>
       </div>
