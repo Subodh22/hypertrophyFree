@@ -16,16 +16,54 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [redirectPending, setRedirectPending] = useState(false);
   
-  const { user, loading, signInWithGoogle } = useAuth();
+  const { user, loading, signInWithGoogle, signInWithGoogleRedirect, isPwa, isMobilePwa } = useAuth();
   const router = useRouter();
+  
+  // Check if we were in the middle of an auth redirect (especially for mobile PWA)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const pending = localStorage.getItem('authRedirectPending') === 'true';
+      const redirectTime = localStorage.getItem('authRedirectTime');
+      
+      // If there was a pending redirect less than 10 minutes ago, show the user we're checking
+      if (pending && redirectTime) {
+        const elapsed = Date.now() - parseInt(redirectTime, 10);
+        if (elapsed < 10 * 60 * 1000) { // 10 minutes
+          setRedirectPending(true);
+          console.log('Returning from auth redirect, checking authentication status...');
+        } else {
+          // Clear old pending redirect flags
+          localStorage.removeItem('authRedirectPending');
+          localStorage.removeItem('authRedirectTime');
+        }
+      }
+    }
+  }, []);
   
   // Redirect if already logged in
   useEffect(() => {
     if (!loading && user) {
+      // Clean up redirect flags
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('authRedirectPending');
+        localStorage.removeItem('authRedirectTime');
+      }
+      
       router.push('/dashboard');
+    } else if (!loading && redirectPending) {
+      // If we were pending a redirect but now we know we're not logged in
+      setRedirectPending(false);
+      setError("Authentication failed after redirect. Please try again.");
+      
+      // Clean up failed redirect
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('authRedirectPending');
+        localStorage.removeItem('authRedirectTime');
+      }
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, redirectPending]);
   
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,24 +134,35 @@ export default function RegisterPage() {
     setIsLoading(true);
     
     try {
-      await signInWithGoogle();
-      // Create a user document if it's a new user
-      // This would typically be handled by a Firebase Cloud Function
-      // but for simplicity, we'll assume the redirect from useEffect is enough
+      // Use the appropriate sign-in method based on whether we're in PWA mode
+      if (isPwa) {
+        console.log(`Using redirect sign-in method for ${isMobilePwa ? 'mobile' : 'desktop'} PWA`);
+        await signInWithGoogleRedirect();
+        // The page will redirect, no need to handle success here
+      } else {
+        console.log("Using popup sign-in method for browser");
+        await signInWithGoogle();
+        // The redirect will happen automatically due to the useEffect above
+      }
     } catch (error: any) {
-      setError(error.message);
+      console.error("Error during sign in:", error);
+      setError("Failed to sign in with Google. Please try again.");
       setIsLoading(false);
     }
   };
   
-  if (loading || user) {
+  if (loading || user || redirectPending) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse flex flex-col items-center">
           <div className="w-12 h-12 rounded-full bg-neon-green/20 flex items-center justify-center mb-4">
             <Dumbbell className="w-6 h-6 text-neon-green" />
           </div>
-          <p className="text-gray-400">Loading...</p>
+          <p className="text-gray-400">
+            {user ? 'Redirecting to dashboard...' : 
+             redirectPending ? 'Checking your sign-in status...' : 
+             'Loading...'}
+          </p>
         </div>
       </div>
     );
@@ -261,8 +310,15 @@ export default function RegisterPage() {
               <path fill="#EA4335" d="M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.099 -17.884 43.989 -14.754 43.989 Z"></path>
             </g>
           </svg>
-          Sign up with Google
+          {isLoading ? 'Signing up...' : 'Sign up with Google'}
         </button>
+        
+        {isPwa && (
+          <p className="text-xs text-gray-400 mb-6 text-center">
+            You&apos;re using the app in {isMobilePwa ? 'mobile' : 'desktop'} PWA mode. 
+            {isMobilePwa ? ' When redirected to Google login, please complete the sign-in and return to this app.' : ''}
+          </p>
+        )}
         
         <p className="text-center text-gray-400 text-sm">
           Already have an account?{' '}

@@ -11,13 +11,35 @@ function LoginContent() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [redirectPending, setRedirectPending] = useState(false);
   
-  const { user, loading, signInWithGoogle, signInWithGoogleRedirect, isPwa } = useAuth();
+  const { user, loading, signInWithGoogle, signInWithGoogleRedirect, isPwa, isMobilePwa } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   // Fix the redirect parameter handling to properly decode the URL
   const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect');
   const redirectPath = returnUrl ? decodeURIComponent(returnUrl) : '/dashboard';
+  
+  // Check if we were in the middle of an auth redirect (especially for mobile PWA)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const pending = localStorage.getItem('authRedirectPending') === 'true';
+      const redirectTime = localStorage.getItem('authRedirectTime');
+      
+      // If there was a pending redirect less than 10 minutes ago, show the user we're checking
+      if (pending && redirectTime) {
+        const elapsed = Date.now() - parseInt(redirectTime, 10);
+        if (elapsed < 10 * 60 * 1000) { // 10 minutes
+          setRedirectPending(true);
+          console.log('Returning from auth redirect, checking authentication status...');
+        } else {
+          // Clear old pending redirect flags
+          localStorage.removeItem('authRedirectPending');
+          localStorage.removeItem('authRedirectTime');
+        }
+      }
+    }
+  }, []);
   
   // Redirect if already logged in
   useEffect(() => {
@@ -25,12 +47,28 @@ function LoginContent() {
       console.log("User is logged in, redirecting to", redirectPath);
       setIsRedirecting(true);
       
+      // Clean up redirect flags
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('authRedirectPending');
+        localStorage.removeItem('authRedirectTime');
+      }
+      
       // Add a small delay to ensure state updates before navigation
       setTimeout(() => {
         router.push(redirectPath);
       }, 100);
+    } else if (!loading && redirectPending) {
+      // If we were pending a redirect but now we know we're not logged in
+      setRedirectPending(false);
+      setError("Authentication failed after redirect. Please try again.");
+      
+      // Clean up failed redirect
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('authRedirectPending');
+        localStorage.removeItem('authRedirectTime');
+      }
     }
-  }, [loading, user, router, redirectPath]);
+  }, [loading, user, router, redirectPath, redirectPending]);
   
   const handleGoogleSignIn = async () => {
     setError(null);
@@ -39,7 +77,7 @@ function LoginContent() {
     try {
       // Use the appropriate sign-in method based on whether we're in PWA mode
       if (isPwa) {
-        console.log("Using redirect sign-in method for PWA");
+        console.log(`Using redirect sign-in method for ${isMobilePwa ? 'mobile' : 'desktop'} PWA`);
         await signInWithGoogleRedirect();
         // The page will redirect, no need to handle success here
       } else {
@@ -56,14 +94,20 @@ function LoginContent() {
   };
   
   // Loading state
-  if (loading || isRedirecting) {
+  if (loading || isRedirecting || redirectPending) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse flex flex-col items-center">
           <div className="w-12 h-12 rounded-full bg-neon-green/20 flex items-center justify-center mb-4">
             <Dumbbell className="w-6 h-6 text-neon-green" />
           </div>
-          <p className="text-gray-400">{isRedirecting ? 'Redirecting you...' : 'Loading...'}</p>
+          <p className="text-gray-400">
+            {isRedirecting 
+              ? 'Redirecting you...' 
+              : redirectPending 
+                ? 'Checking your sign-in status...'
+                : 'Loading...'}
+          </p>
         </div>
       </div>
     );
@@ -112,7 +156,8 @@ function LoginContent() {
 
         {isPwa && (
           <p className="text-xs text-gray-400 mb-6 text-center">
-            You&apos;re using the app in PWA mode. You&apos;ll be redirected to sign in with Google.
+            You&apos;re using the app in {isMobilePwa ? 'mobile' : 'desktop'} PWA mode. 
+            {isMobilePwa ? ' When redirected to Google login, please complete the sign-in and return to this app.' : ''}
           </p>
         )}
         
