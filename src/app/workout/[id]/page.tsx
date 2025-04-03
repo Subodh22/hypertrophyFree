@@ -33,7 +33,7 @@ import { Modal } from "@/components/ui/Modal";
 import Link from 'next/link';
 import { format } from 'date-fns';
 import LoadingScreen from '@/components/LoadingScreen';
-import { updateWorkoutProgress, updateMesocycleAsync } from '@/lib/slices/workoutSlice';
+import { updateWorkoutProgress, updateMesocycleAsync, fetchMesocycleByIdAsync } from '@/lib/slices/workoutSlice';
 import WeightFeelingSurvey from '@/components/WeightFeelingSurvey';
 
 export default function WorkoutDetailPage({ params }: { params: { id: string } }) {
@@ -51,6 +51,8 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
   const [timer, setTimer] = useState(90); // Default rest timer in seconds
   const [initialTimer, setInitialTimer] = useState(90);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  // Add a ref to track if we've already attempted to fetch fresh data
+  const freshDataFetchedRef = useRef(false);
   
   // Audio reference for timer completion sound
   const timerAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -151,23 +153,47 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
     propagateToAllWeeks: true
   });
   
+  // Track if we've fetched data in this session
+  const hasInitialFetchRef = useRef(false);
+  
+  // Ref to track if we've already fetched data based on the timestamp
+  const timestampFetchedRef = useRef(false);
+  
+  // Track data fetching state with useState
+  const [dataFetched, setDataFetched] = useState(false);
+  
   // Find workout details from mesocycle
   useEffect(() => {
-    if (currentMesocycle) {
-      // Find the workout in the current mesocycle
-      let foundWorkout = null;
-      
-      // Search through all weeks
-      for (const [weekNum, weekWorkouts] of Object.entries(currentMesocycle.workouts)) {
-        const found = weekWorkouts.find((w: any) => w.id === params.id);
-        if (found) {
-          foundWorkout = { ...found, weekNum };
-          break;
-        }
+    // Only fetch if we have the required data and haven't fetched yet
+    if (!user || !params.id || dataFetched) return;
+    
+    // Mark as fetched to prevent further fetches
+    setDataFetched(true);
+    
+    // Only fetch if we have the required data
+    if (!user || !params.id) return;
+    
+    // Parse query parameters from URL for the timestamp
+    const urlParams = new URLSearchParams(window.location.search);
+    const timestamp = urlParams.get('t');
+    
+    // If we already fetched for this timestamp, don't fetch again
+    if (timestamp && timestampFetchedRef.current) {
+      return;
+    }
+    
+    const fetchWorkoutData = async () => {
+      setLoading(true);
+      if (timestamp) {
+        timestampFetchedRef.current = true;
       }
       
-      if (foundWorkout) {
+      // Helper function to process workout data and update state
+      const processWorkoutData = (foundWorkout: any) => {
         setWorkout(foundWorkout);
+        
+        // Create a temporary set to collect all completed sets before updating state
+        const completedSetsTemp = new Set<string>();
         
         // Prepare exercises with their sets
         const exerciseList = foundWorkout.exercises.map((exercise: any) => {
@@ -178,6 +204,15 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
             // Use existing generatedSets
             generatedSets = exercise.generatedSets;
             console.log(`⭐ Found ${generatedSets.length} existing generatedSets for ${exercise.name}`);
+            
+            // Mark sets with completion data as completed
+            generatedSets.forEach((set: any, index: number) => {
+              if (set.completedWeight || set.completedReps) {
+                const uniqueId = `${exercise.id}-${set.id}`;
+                completedSetsTemp.add(uniqueId);
+                console.log(`⭐ Auto-marking completed set from DB: ${exercise.name} set #${index+1}, weight: ${set.completedWeight}, reps: ${set.completedReps}`);
+              }
+            });
           } else {
             // Create new generatedSets
             generatedSets = Array.from({ length: parseInt(exercise.sets) || 3 }, (_, i) => ({
@@ -190,6 +225,9 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
           }));
             console.log(`⭐ Created ${generatedSets.length} new generatedSets for ${exercise.name}`);
           }
+          
+          // Reset completedSets state
+          setCompletedSets(new Set());
           
           // Update completedSets state with any already completed sets
           generatedSets.forEach((set: any, index: number) => {
@@ -211,74 +249,149 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
           };
         });
         
+        // Set the completed sets all at once after processing all exercises
+        if (completedSetsTemp.size > 0) {
+          console.log(`⭐ Setting ${completedSetsTemp.size} completed sets from database`);
+          setCompletedSets(completedSetsTemp);
+        } else {
+          // If no completed sets were found, reset to empty set
+          setCompletedSets(new Set());
+        }
+        
         setExercises(exerciseList);
         setLoading(false);
-      } else {
-        // If not found in current mesocycle, search in all mesocycles
+      };
+      
+      // If user is authenticated, always fetch fresh data from Firestore
+      if (user) {
+        try {
+          // Set the flag to true to prevent further fetches
+          freshDataFetchedRef.current = true;
+          
+          // Search in current mesocycle first to find which mesocycle contains this workout
+          let mesocycleId = currentMesocycle?.id;
+          
+          if (!mesocycleId) {
+            // If no current mesocycle, search all mesocycles
         for (const mesocycle of mesocycles) {
           for (const [weekNum, weekWorkouts] of Object.entries(mesocycle.workouts)) {
-            const found = weekWorkouts.find((w: any) => w.id === params.id);
+                const found = (weekWorkouts as any[]).find((w: any) => w.id === params.id);
             if (found) {
-              foundWorkout = { ...found, weekNum };
-              setWorkout(foundWorkout);
+                  mesocycleId = mesocycle.id;
+                  break;
+                }
+              }
+              if (mesocycleId) break;
+            }
+          }
+          
+          // If we found which mesocycle contains this workout, fetch fresh data exactly once
+          if (mesocycleId) {
+            console.log("⭐ Fetching fresh mesocycle data from Firestore:", mesocycleId);
+            
+            try {
+              // Direct Firestore access instead of using Redux
+              const docRef = doc(db, 'mesocycles', mesocycleId);
+              const docSnap = await getDoc(docRef);
               
-              // Prepare exercises with their sets - same logic as above
-              const exerciseList = foundWorkout.exercises.map((exercise: any) => {
-                // Use generatedSets if available, otherwise create them
-                let generatedSets = [];
+              if (docSnap.exists()) {
+                const mesocycleData = docSnap.data();
+                let foundWorkout = null;
                 
-                if (exercise.generatedSets && Array.isArray(exercise.generatedSets)) {
-                  // Use existing generatedSets
-                  generatedSets = exercise.generatedSets;
-                  console.log(`⭐ Found ${generatedSets.length} existing generatedSets for ${exercise.name}`);
-                } else {
-                  // Create new generatedSets
-                  generatedSets = Array.from({ length: parseInt(exercise.sets) || 3 }, (_, i) => ({
-                  id: `${exercise.id}-set-${i+1}`,
-                  number: i + 1,
-                  targetReps: exercise.reps,
-                  targetWeight: exercise.weight || "",
-                  completedReps: "",
-                  completedWeight: "",
-                }));
-                  console.log(`⭐ Created ${generatedSets.length} new generatedSets for ${exercise.name}`);
+                // Search through all weeks in the fresh data
+                for (const [week, weekWorkouts] of Object.entries(mesocycleData.workouts || {})) {
+                  const found = (weekWorkouts as any[]).find((w: any) => w.id === params.id);
+                  if (found) {
+                    foundWorkout = { ...found, weekNum: week.replace('week', '') };
+                    break;
+                  }
                 }
                 
-                // Update completedSets state with any already completed sets
-                generatedSets.forEach((set: any, index: number) => {
-                  if (set.completedWeight && set.completedReps) {
-                    // This set has completion data, mark it as completed
-                    const uniqueId = `${exercise.id}-${set.id}`;
-                    setCompletedSets(prev => {
-                      const newSet = new Set(prev);
-                      newSet.add(uniqueId);
-                      return newSet;
-                    });
-                    console.log(`⭐ Found completed set: ${exercise.name} set #${index+1}`);
-                  }
-                });
-                
-                return {
-                  ...exercise,
-                  sets: generatedSets
-                };
-              });
-              
-              setExercises(exerciseList);
-              setLoading(false);
+                if (foundWorkout) {
+                  console.log("⭐ Found workout with fresh data:", foundWorkout.name);
+                  processWorkoutData(foundWorkout);
               return;
             }
           }
-        }
-        
-        // If still not found, handle the error
-        if (!foundWorkout) {
-          console.error("Workout not found:", params.id);
-          setLoading(false);
+            } catch (error) {
+              console.error("Error accessing Firestore directly:", error);
+            }
+            
+            // As a fallback, if direct Firestore access fails, try Redux (but this might trigger a loop)
+            // await dispatch(fetchMesocycleByIdAsync(mesocycleId) as any);
+            
+            // After fetching, the state will be updated
+            // Now search for workout with the freshly fetched data
+            const state = (dispatch as any).getState();
+            const updatedMesocycle = state.workout.currentMesocycle || 
+                                    state.workout.mesocycles.find((m: any) => m.id === mesocycleId);
+            
+            if (updatedMesocycle) {
+              let foundWorkout = null;
+              let weekNum = '';
+              
+              // Search through all weeks
+              for (const [week, weekWorkouts] of Object.entries(updatedMesocycle.workouts)) {
+                const found = (weekWorkouts as any[]).find((w: any) => w.id === params.id);
+                if (found) {
+                  foundWorkout = { ...found, weekNum: week.replace('week', '') };
+                  weekNum = week;
+                  break;
+                }
+              }
+              
+              if (foundWorkout) {
+                console.log("⭐ Found workout with fresh data:", foundWorkout.name);
+                processWorkoutData(foundWorkout);
+              return;
+            }
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching fresh mesocycle data:", error);
+          // Continue with fallback to Redux state below
         }
       }
-    }
-  }, [currentMesocycle, mesocycles, params.id]);
+      
+      // Fallback to using current state data
+      if (currentMesocycle) {
+        // Find the workout in the current mesocycle
+        let foundWorkout = null;
+        
+        // Search through all weeks
+        for (const [weekNum, weekWorkouts] of Object.entries(currentMesocycle.workouts)) {
+          const found = (weekWorkouts as any[]).find((w: any) => w.id === params.id);
+          if (found) {
+            foundWorkout = { ...found, weekNum: weekNum.replace('week', '') };
+            break;
+          }
+        }
+        
+        if (foundWorkout) {
+          processWorkoutData(foundWorkout);
+          return;
+        }
+      }
+      
+      // If not found in current mesocycle, search in all mesocycles
+      for (const mesocycle of mesocycles) {
+        for (const [weekNum, weekWorkouts] of Object.entries(mesocycle.workouts)) {
+          const found = (weekWorkouts as any[]).find((w: any) => w.id === params.id);
+          if (found) {
+            const foundWorkout = { ...found, weekNum: weekNum.replace('week', '') };
+            processWorkoutData(foundWorkout);
+            return;
+          }
+        }
+      }
+      
+      // If still not found, handle the error
+      console.error("Workout not found:", params.id);
+      setLoading(false);
+    };
+    
+    fetchWorkoutData();
+  }, [user, params.id, currentMesocycle, mesocycles, dataFetched]);  // Removed window.location.search to prevent loop
   
   // Timer effect
   useEffect(() => {
@@ -391,7 +504,7 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
         setTimer(newTime);
         
         if (newTime === 0) {
-          setTimerActive(false);
+      setTimerActive(false);
           clearInterval(interval);
           
           // Play sound when timer completes
@@ -738,26 +851,158 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
   
   // Handle updating set details
   const updateSetDetails = (exerciseIndex: number, setIndex: number, field: string, value: any) => {
-    // Create a deep clone of the exercises array and all nested objects
-    const updatedExercises = exercises.map((exercise, idx) => {
-      if (idx !== exerciseIndex) return exercise;
+    // Clone exercises to avoid direct state mutation
+    const updatedExercises = [...exercises];
+    const exercise = updatedExercises[exerciseIndex];
+    const set = exercise.sets[setIndex];
+    
+    // Update the specified field
+    set[field] = value;
+    
+    // Auto-check the "done" mark if both weight and reps are filled
+    if (set.completedWeight && set.completedReps) {
+      const uniqueId = `${exercise.id}-${set.id}`;
       
-      // Deep clone this exercise
-      return {
-        ...exercise,
-        sets: exercise.sets.map((set: any, setIdx: number) => {
-          if (setIdx !== setIndex) return set;
-          
-          // Create a new set with the updated field
-          return {
-            ...set,
-            [field]: value
-          };
-        })
-      };
-    });
+      // Only add to completedSets if it's not already there
+      if (!completedSets.has(uniqueId)) {
+        console.log(`⭐ Auto-marking set as completed: ${exercise.name} set #${setIndex + 1}`);
+        setCompletedSets(prev => {
+          const newSet = new Set(prev);
+          newSet.add(uniqueId);
+          return newSet;
+        });
+        
+        // Also save the set data to Firebase (similar to what toggleSetCompletion does)
+        if (currentMesocycle && user) {
+          saveSetToFirebase(exercise.id, set.id, exercise, setIndex);
+        }
+      }
+    }
     
     setExercises(updatedExercises);
+  };
+  
+  // Function to save set data to Firebase
+  const saveSetToFirebase = (exerciseId: string, setId: string, exercise: any, setIndex: number) => {
+    const weight = exercise.sets[setIndex].completedWeight || exercise.sets[setIndex].targetWeight || '';
+    const reps = exercise.sets[setIndex].completedReps || exercise.sets[setIndex].targetReps || '';
+    
+    // Only save if we have data
+    if (weight && reps && currentMesocycle && user) {
+      console.log("⭐ Auto-saving set data to Firebase:", {
+        exerciseId, 
+        setId,
+        weight, 
+        reps,
+        setNumber: setIndex + 1
+      });
+      
+      // Find where this workout is in the mesocycle
+      let weekKey = '';
+      let workoutIndex = -1;
+      let exerciseDocIndex = -1;
+      
+      // Search through mesocycle.workouts to find this workout
+      if (currentMesocycle.workouts) {
+        Object.entries(currentMesocycle.workouts).forEach(([week, workouts]: [string, any]) => {
+          workouts.forEach((workout: any, idx: number) => {
+            if (workout.id === params.id) {
+              weekKey = week;
+              workoutIndex = idx;
+              
+              // Find exercise
+              workout.exercises.forEach((ex: any, exIdx: number) => {
+                if (ex.id === exerciseId) {
+                  exerciseDocIndex = exIdx;
+                }
+              });
+            }
+          });
+        });
+      }
+      
+      // If we found all the path components, save to Firebase
+      if (weekKey && workoutIndex !== -1 && exerciseDocIndex !== -1) {
+        const docRef = doc(db, 'mesocycles', currentMesocycle.id);
+        
+        // Get current document
+        getDoc(docRef).then(docSnap => {
+          if (!docSnap.exists()) {
+            console.error("Mesocycle not found in Firebase");
+            return;
+          }
+          
+          // Get data
+          const data = docSnap.data();
+          
+          // Verify path exists
+          if (!data.workouts || !data.workouts[weekKey] || 
+              !data.workouts[weekKey][workoutIndex] || 
+              !data.workouts[weekKey][workoutIndex].exercises ||
+              !data.workouts[weekKey][workoutIndex].exercises[exerciseDocIndex]) {
+            console.error("Invalid path to exercise in Firebase document");
+            return;
+          }
+          
+          // Get the exercise to update
+          const exerciseDoc = data.workouts[weekKey][workoutIndex].exercises[exerciseDocIndex];
+          
+          // Find or initialize the generatedSets array
+          if (!exerciseDoc.generatedSets || !Array.isArray(exerciseDoc.generatedSets)) {
+            console.log("⭐ Creating generatedSets array for exercise", exerciseDoc.name);
+            exerciseDoc.generatedSets = Array.from({ length: exercise.sets.length }, (_, i) => ({
+                id: `${exerciseDoc.id}-set-${i+1}`,
+                number: i + 1,
+                targetReps: exerciseDoc.reps,
+                targetWeight: exerciseDoc.weight || "",
+                completedReps: "",
+                completedWeight: ""
+            }));
+          }
+          
+          // Make sure the generatedSets array is long enough
+          while (exerciseDoc.generatedSets.length <= setIndex) {
+            const newSetIndex = exerciseDoc.generatedSets.length;
+            exerciseDoc.generatedSets.push({
+              id: `${exerciseDoc.id}-set-${newSetIndex+1}`,
+              number: newSetIndex + 1,
+                targetReps: exerciseDoc.reps,
+                targetWeight: exerciseDoc.weight || "",
+                completedReps: "",
+                completedWeight: ""
+              });
+          }
+          
+          // Update the specific set
+          if (setIndex >= 0 && setIndex < exerciseDoc.generatedSets.length) {
+            exerciseDoc.generatedSets[setIndex].completedWeight = weight;
+            exerciseDoc.generatedSets[setIndex].completedReps = reps;
+            
+            console.log("⭐ Auto-updated set data in Firebase:", {
+              exerciseName: exerciseDoc.name,
+              setIndex,
+              weight, 
+              reps
+            });
+            
+            // Mark exercise as completed
+            exerciseDoc.completed = true;
+            
+            // Update document with set-specific changes
+            updateDoc(docRef, {
+              workouts: data.workouts,
+              updatedAt: new Date().toISOString()
+            }).then(() => {
+              console.log("⭐ Successfully auto-saved set data to Firebase");
+            }).catch(error => {
+              console.error("Error auto-saving set data to Firebase:", error);
+            });
+          }
+        }).catch(error => {
+          console.error("Error getting document for auto-save:", error);
+        });
+      }
+    }
   };
   
   // Show the feedback survey
@@ -1699,26 +1944,34 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
     if (!exercise) return;
     
     // Create a new set object
-    const newSetId = `${exercise.id}-set-${exercise.sets.length + 1}`;
+    const newSetNumber = exercise.sets.length + 1;
+    const newSetId = `${exercise.id}-set-${newSetNumber}`;
     const newSet = {
       id: newSetId,
-      number: exercise.sets.length + 1,
+      number: newSetNumber,
       targetReps: exercise.reps,
       targetWeight: exercise.weight || "",
       completedReps: "",
       completedWeight: ""
     };
     
-    // Update local state
-    const updatedExercises = [...exercises];
-    updatedExercises[exerciseIndex] = {
-      ...exercise,
-      sets: [...exercise.sets, newSet]
-    };
+    // Create a deep clone of the current exercises array
+    const updatedExercises = JSON.parse(JSON.stringify(exercises));
+    
+    // Ensure both sets and generatedSets are updated
+    updatedExercises[exerciseIndex].sets.push(newSet);
+    
+    // Log the update details for debugging
+    console.log(`⭐ Adding new set to ${exercise.name}:`, {
+      existingSets: exercise.sets.length,
+      newSetNumber: newSetNumber,
+      updatedTotalSets: updatedExercises[exerciseIndex].sets.length
+    });
+    
     setExercises(updatedExercises);
     
     // Find the week and workout index
-    const weekKey = `week${workout.week}`;
+    const weekKey = `week${workout.weekNum}`;
     const workoutIndex = currentMesocycle.workouts[weekKey].findIndex(w => w.id === workout.id);
     
     if (workoutIndex === -1) {
@@ -1729,8 +1982,36 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
     // Create deep copy of the mesocycle to update
     const updatedMesocycle = JSON.parse(JSON.stringify(currentMesocycle));
     
-    // Add the set to the exercise in the copied mesocycle
-    updatedMesocycle.workouts[weekKey][workoutIndex].exercises[exerciseIndex].sets.push(newSet);
+    // Get the exercise in the copied mesocycle
+    const targetExercise = updatedMesocycle.workouts[weekKey][workoutIndex].exercises[exerciseIndex];
+    
+    // Initialize generatedSets if it doesn't exist
+    if (!targetExercise.generatedSets || !Array.isArray(targetExercise.generatedSets)) {
+      targetExercise.generatedSets = [];
+      
+      // Copy all existing sets from our local state
+      for (let i = 0; i < exercise.sets.length - 1; i++) {
+        targetExercise.generatedSets.push({
+          id: `${exercise.id}-set-${i+1}`,
+          number: i + 1,
+          targetReps: exercise.reps,
+          targetWeight: exercise.weight || "",
+          completedReps: "",
+          completedWeight: ""
+        });
+      }
+    }
+    
+    // Add the new set to the generatedSets array
+    targetExercise.generatedSets.push(newSet);
+    
+    // Update the sets property to keep data consistent
+    if (typeof targetExercise.sets === 'number') {
+      targetExercise.sets = targetExercise.sets + 1;
+    } else {
+      // If sets isn't a number, it might be an array or undefined
+      targetExercise.sets = targetExercise.generatedSets.length;
+    }
     
     // Update in Redux and Firestore
     dispatch(updateMesocycleAsync({

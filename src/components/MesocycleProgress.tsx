@@ -813,7 +813,7 @@ export default function MesocycleProgress({ mesocycle }: MesocycleProgressProps)
                       </div>
                       
                       <Link 
-                        href={`/workout/${workout.id}`}
+                        href={`/workout/${workout.id}?t=${Date.now()}`}
                         className="btn-primary w-full flex items-center justify-center gap-2 py-2"
                       >
                         {workout.completed ? 'View Details' : 'Start Workout'} <ArrowRight className="w-4 h-4" />

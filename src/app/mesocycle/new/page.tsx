@@ -1000,7 +1000,7 @@ export default function CreateMesocyclePage() {
         </div>
       </div>
       
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-gray-800 p-4 flex justify-between">
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-gray-800 p-4 flex justify-between mb-16">
         <button
           onClick={() => router.back()}
           className="btn-secondary py-3 px-6"
