@@ -1690,6 +1690,61 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
     });
   };
   
+  // Function to add a new set to an exercise
+  const addSet = (exerciseIndex: number) => {
+    if (!workout || !currentMesocycle || !user) return;
+    
+    // Get the exercise
+    const exercise = exercises[exerciseIndex];
+    if (!exercise) return;
+    
+    // Create a new set object
+    const newSetId = `${exercise.id}-set-${exercise.sets.length + 1}`;
+    const newSet = {
+      id: newSetId,
+      number: exercise.sets.length + 1,
+      targetReps: exercise.reps,
+      targetWeight: exercise.weight || "",
+      completedReps: "",
+      completedWeight: ""
+    };
+    
+    // Update local state
+    const updatedExercises = [...exercises];
+    updatedExercises[exerciseIndex] = {
+      ...exercise,
+      sets: [...exercise.sets, newSet]
+    };
+    setExercises(updatedExercises);
+    
+    // Find the week and workout index
+    const weekKey = `week${workout.week}`;
+    const workoutIndex = currentMesocycle.workouts[weekKey].findIndex(w => w.id === workout.id);
+    
+    if (workoutIndex === -1) {
+      toast.error("Could not find workout to update");
+      return;
+    }
+    
+    // Create deep copy of the mesocycle to update
+    const updatedMesocycle = JSON.parse(JSON.stringify(currentMesocycle));
+    
+    // Add the set to the exercise in the copied mesocycle
+    updatedMesocycle.workouts[weekKey][workoutIndex].exercises[exerciseIndex].sets.push(newSet);
+    
+    // Update in Redux and Firestore
+    dispatch(updateMesocycleAsync({
+      id: currentMesocycle.id,
+      updates: { workouts: updatedMesocycle.workouts },
+      userId: user.uid
+    }) as any).then(() => {
+      toast.success("Set added");
+    }).catch((error: Error) => {
+      console.error("Error adding set:", error);
+      toast.error("Failed to add set. Please try again.");
+    });
+  };
+  
   // Function to handle deleting an exercise from a single workout
   const deleteExercise = (exerciseIndex: number) => {
     if (!workout || !currentMesocycle) return;
@@ -2316,7 +2371,13 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                       </span> / {exercise.sets.length} sets completed
                     </div>
                     <div className="flex gap-2">
-                      <button className="btn-secondary py-1 px-3 text-sm">
+                      <button 
+                        className="btn-secondary py-1 px-3 text-sm"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent the exercise from toggling expand/collapse
+                          addSet(exerciseIndex);
+                        }}
+                      >
                         <Plus className="w-3 h-3 mr-1" /> Add Set
                       </button>
                             <button 
@@ -2589,6 +2650,67 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
               disabled={!newExercise.name.trim()}
             >
               <Dumbbell className="w-4 h-4" /> Add Exercise
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Exercise Confirmation Modal */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setExerciseToDelete(null);
+        }}
+        title="Delete Exercise"
+      >
+        <div className="p-4">
+          <p className="mb-6 text-gray-300">
+            {exerciseToDelete && `Are you sure you want to delete "${exerciseToDelete.name}"?`}
+          </p>
+          
+          <div className="flex flex-col gap-4">
+            <button
+              onClick={() => {
+                if (exerciseToDelete) {
+                  const exerciseIndex = exercises.findIndex(ex => ex.id === exerciseToDelete.id);
+                  if (exerciseIndex !== -1) {
+                    deleteExercise(exerciseIndex);
+                  }
+                }
+                setDeleteModalOpen(false);
+                setExerciseToDelete(null);
+              }}
+              className="py-3 px-4 rounded-md border border-gray-700 bg-gray-800 text-white font-medium hover:bg-gray-700"
+            >
+              Delete from this workout only
+            </button>
+            
+            <button
+              onClick={deleteExerciseFromAllWeeks}
+              className="py-3 px-4 rounded-md bg-red-600 text-white font-medium hover:bg-red-700 flex items-center justify-center gap-2"
+            >
+              {isCompleting ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"/>
+                  Processing...
+                </span>
+              ) : (
+                <>
+                  <Trash className="w-4 h-4" />
+                  Delete from all workouts
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={() => {
+                setDeleteModalOpen(false);
+                setExerciseToDelete(null);
+              }}
+              className="py-2 px-4 text-gray-400 hover:text-white"
+            >
+              Cancel
             </button>
           </div>
         </div>
