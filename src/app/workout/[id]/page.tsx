@@ -214,14 +214,14 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
               }
             });
           } else {
-            // Create new generatedSets
+            // Create new generatedSets with only required fields
             generatedSets = Array.from({ length: parseInt(exercise.sets) || 3 }, (_, i) => ({
             id: `${exercise.id}-set-${i+1}`,
             number: i + 1,
             targetReps: exercise.reps,
             targetWeight: exercise.weight || "",
             completedReps: "",
-            completedWeight: "",
+            completedWeight: ""
           }));
             console.log(`⭐ Created ${generatedSets.length} new generatedSets for ${exercise.name}`);
           }
@@ -977,12 +977,16 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
           if (setIndex >= 0 && setIndex < exerciseDoc.generatedSets.length) {
             exerciseDoc.generatedSets[setIndex].completedWeight = weight;
             exerciseDoc.generatedSets[setIndex].completedReps = reps;
+            exerciseDoc.generatedSets[setIndex].completed = true;
+            exerciseDoc.generatedSets[setIndex].timestamp = new Date().toISOString();
             
             console.log("⭐ Auto-updated set data in Firebase:", {
               exerciseName: exerciseDoc.name,
               setIndex,
               weight, 
-              reps
+              reps,
+              completed: true,
+              timestamp: exerciseDoc.generatedSets[setIndex].timestamp
             });
             
             // Mark exercise as completed
@@ -1487,8 +1491,8 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
   const completeWorkout = async () => {
     if (!user || !workout || !currentMesocycle) {
       toast.error("Cannot complete workout: missing user, workout, or mesocycle data");
-        return;
-      }
+          return;
+        }
       
     setIsCompleting(true);
 
@@ -1936,94 +1940,99 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
   };
   
   // Function to add a new set to an exercise
-  const addSet = (exerciseIndex: number) => {
+  const addSet = async (exerciseIndex: number) => {
     if (!workout || !currentMesocycle || !user) return;
     
-    // Get the exercise
-    const exercise = exercises[exerciseIndex];
-    if (!exercise) return;
-    
-    // Create a new set object
-    const newSetNumber = exercise.sets.length + 1;
-    const newSetId = `${exercise.id}-set-${newSetNumber}`;
-    const newSet = {
-      id: newSetId,
-      number: newSetNumber,
-      targetReps: exercise.reps,
-      targetWeight: exercise.weight || "",
-      completedReps: "",
-      completedWeight: ""
-    };
-    
-    // Create a deep clone of the current exercises array
-    const updatedExercises = JSON.parse(JSON.stringify(exercises));
-    
-    // Ensure both sets and generatedSets are updated
-    updatedExercises[exerciseIndex].sets.push(newSet);
-    
-    // Log the update details for debugging
-    console.log(`⭐ Adding new set to ${exercise.name}:`, {
-      existingSets: exercise.sets.length,
-      newSetNumber: newSetNumber,
-      updatedTotalSets: updatedExercises[exerciseIndex].sets.length
-    });
-    
-    setExercises(updatedExercises);
-    
-    // Find the week and workout index
-    const weekKey = `week${workout.weekNum}`;
-    const workoutIndex = currentMesocycle.workouts[weekKey].findIndex(w => w.id === workout.id);
-    
-    if (workoutIndex === -1) {
-      toast.error("Could not find workout to update");
-      return;
-    }
-    
-    // Create deep copy of the mesocycle to update
-    const updatedMesocycle = JSON.parse(JSON.stringify(currentMesocycle));
-    
-    // Get the exercise in the copied mesocycle
-    const targetExercise = updatedMesocycle.workouts[weekKey][workoutIndex].exercises[exerciseIndex];
-    
-    // Initialize generatedSets if it doesn't exist
-    if (!targetExercise.generatedSets || !Array.isArray(targetExercise.generatedSets)) {
-      targetExercise.generatedSets = [];
+    try {
+      // First, get fresh data directly from Firestore to ensure we have the latest state
+      const docRef = doc(db, 'mesocycles', currentMesocycle.id);
+      const docSnap = await getDoc(docRef);
       
-      // Copy all existing sets from our local state
-      for (let i = 0; i < exercise.sets.length - 1; i++) {
-        targetExercise.generatedSets.push({
-          id: `${exercise.id}-set-${i+1}`,
-          number: i + 1,
-          targetReps: exercise.reps,
-          targetWeight: exercise.weight || "",
-          completedReps: "",
-          completedWeight: ""
-        });
+      if (!docSnap.exists()) {
+        toast.error("Mesocycle not found in Firestore");
+        return;
       }
-    }
-    
-    // Add the new set to the generatedSets array
-    targetExercise.generatedSets.push(newSet);
-    
-    // Update the sets property to keep data consistent
-    if (typeof targetExercise.sets === 'number') {
-      targetExercise.sets = targetExercise.sets + 1;
-    } else {
-      // If sets isn't a number, it might be an array or undefined
-      targetExercise.sets = targetExercise.generatedSets.length;
-    }
-    
-    // Update in Redux and Firestore
-    dispatch(updateMesocycleAsync({
-      id: currentMesocycle.id,
-      updates: { workouts: updatedMesocycle.workouts },
-      userId: user.uid
-    }) as any).then(() => {
+      
+      // Get the current data from Firestore
+      const firestoreData = docSnap.data();
+      
+      // Find the week and workout in Firestore data
+      const weekKey = `week${workout.weekNum}`;
+      const workoutIndex = currentMesocycle.workouts[weekKey].findIndex(w => w.id === workout.id);
+      
+      if (workoutIndex === -1) {
+        toast.error("Could not find workout to update");
+        return;
+      }
+      
+      // Check if we can access the exercise in Firestore
+      if (!firestoreData.workouts?.[weekKey]?.[workoutIndex]?.exercises?.[exerciseIndex]) {
+        toast.error("Could not find exercise in Firestore");
+        return;
+      }
+      
+      // Get the exercise from our local state
+      const exercise = exercises[exerciseIndex];
+      if (!exercise) {
+        toast.error("Exercise not found in local state");
+        return;
+      }
+      
+      // Prepare the new set object
+      const newSetNumber = exercise.sets.length + 1;
+      const newSetId = `${exercise.id}-set-${newSetNumber}`;
+      const newSet = {
+        id: newSetId,
+        number: newSetNumber,
+        targetReps: exercise.reps,
+        targetWeight: exercise.weight || "",
+        completedReps: "",
+        completedWeight: ""
+      };
+      
+      // Get a reference to the exercise in Firestore
+      const firestoreExercise = firestoreData.workouts[weekKey][workoutIndex].exercises[exerciseIndex];
+      
+      // Make sure the generatedSets array exists
+      if (!firestoreExercise.generatedSets) {
+        firestoreExercise.generatedSets = [];
+      }
+      
+      // If it's not an array, initialize it
+      if (!Array.isArray(firestoreExercise.generatedSets)) {
+        firestoreExercise.generatedSets = [];
+      }
+      
+      console.log(`⭐ Found ${firestoreExercise.generatedSets.length} existing sets in Firestore`);
+      
+      // Add our new set to the EXISTING generatedSets array from Firestore
+      firestoreExercise.generatedSets.push(newSet);
+      
+      // Update the 'sets' property if it exists and is a number
+      if (typeof firestoreExercise.sets === 'number') {
+        firestoreExercise.sets = firestoreExercise.sets + 1;
+      } else {
+        firestoreExercise.sets = firestoreExercise.generatedSets.length;
+      }
+      
+      console.log(`⭐ Updated to ${firestoreExercise.generatedSets.length} sets in Firestore`);
+      
+      // Update the entire document in Firestore
+      await updateDoc(docRef, {
+        workouts: firestoreData.workouts,
+        updatedAt: new Date().toISOString()
+      });
+      
+      // Also update local state for immediate UI feedback
+      const updatedExercises = JSON.parse(JSON.stringify(exercises));
+      updatedExercises[exerciseIndex].sets.push(newSet);
+      setExercises(updatedExercises);
+      
       toast.success("Set added");
-    }).catch((error: Error) => {
+    } catch (error) {
       console.error("Error adding set:", error);
       toast.error("Failed to add set. Please try again.");
-    });
+    }
   };
   
   // Function to handle deleting an exercise from a single workout
@@ -2071,8 +2080,8 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
       }).catch((error: Error) => {
         console.error("Error removing exercise:", error);
         toast.error("Failed to remove exercise. Please try again.");
-      });
-    } else {
+        });
+      } else {
       // For offline mode
       toast.success("Exercise removed from this workout");
     }
