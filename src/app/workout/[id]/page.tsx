@@ -150,7 +150,9 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
     reps: 10,
     weight: "",
     muscleGroup: "other",
-    propagateToAllWeeks: true
+    propagateToAllWeeks: true,
+    exerciseType: "standard", // Add new field for exercise type (standard or cardio)
+    duration: 20, // Duration in minutes for cardio exercises
   });
   
   // Track if we've fetched data in this session
@@ -2175,28 +2177,43 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
       const exerciseId = `exercise-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       const baseExerciseId = exerciseId; // Use the same ID as base ID for tracking across weeks
       
-      // Create generatedSets for the exercise
-      const generatedSets = Array.from({ length: newExercise.sets }, (_, i) => ({
-        id: `${exerciseId}-set-${i+1}`,
-        number: i + 1,
-        targetReps: newExercise.reps.toString(),
-        targetWeight: newExercise.weight || "",
-        completedReps: "",
-        completedWeight: ""
-      }));
+      let generatedSets = [];
+      
+      if (newExercise.exerciseType === "standard") {
+        // Create generatedSets for the standard exercise with reps/weight
+        generatedSets = Array.from({ length: newExercise.sets }, (_, i) => ({
+          id: `${exerciseId}-set-${i+1}`,
+          number: i + 1,
+          targetReps: newExercise.reps.toString(),
+          targetWeight: newExercise.weight || "",
+          completedReps: "",
+          completedWeight: ""
+        }));
+      } else {
+        // Create a single set for cardio with duration
+        generatedSets = [{
+          id: `${exerciseId}-cardio-1`,
+          number: 1,
+          targetDuration: newExercise.duration.toString(),
+          completedDuration: "",
+          isCardio: true
+        }];
+      }
       
       // Create the new exercise object - make structure match existing exercises
       const exerciseToAdd = {
         id: exerciseId,
         name: newExercise.name,
         muscleGroup: newExercise.muscleGroup,
-        sets: newExercise.sets, // This should be a number, not an array
-        reps: newExercise.reps,
-        weight: newExercise.weight || "",
+        sets: newExercise.exerciseType === "standard" ? newExercise.sets : 1, // For cardio, only 1 "set"
+        reps: newExercise.exerciseType === "standard" ? newExercise.reps : 0, // No reps for cardio
+        weight: newExercise.exerciseType === "standard" ? (newExercise.weight || "") : "",
         notes: "",
         generatedSets, // This is where the actual set data goes
         weightFeeling: "",
         baseExerciseId,
+        exerciseType: newExercise.exerciseType, // Add exercise type to the object
+        duration: newExercise.exerciseType === "cardio" ? newExercise.duration : 0, // Add duration for cardio
         feedback: {
           weightFeeling: "",
           muscleActivation: "",
@@ -2206,7 +2223,7 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
         }
       };
       
-      console.log(`⭐ Adding new exercise: ${newExercise.name} with ${newExercise.sets} sets`);
+      console.log(`⭐ Adding new exercise: ${newExercise.name} with ${generatedSets.length} sets, type: ${newExercise.exerciseType}`);
       
       // Add to local state immediately with the correct structure for UI rendering
       const exerciseForUI = {
@@ -2325,7 +2342,9 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
             reps: 10,
             weight: "",
             muscleGroup: "other",
-            propagateToAllWeeks: true
+            propagateToAllWeeks: true,
+            exerciseType: "standard", // Reset exercise type
+            duration: 20, // Reset duration
           });
           
           // Close the modal
@@ -2570,7 +2589,10 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
               <div className="flex justify-between items-center">
                 <h3 className="font-bold">{exercise.name}</h3>
                 <div className="text-sm text-gray-400">
-                  {exercise.originalSets || exercise.sets.length} sets x {exercise.reps} reps
+                  {exercise.exerciseType === "cardio" 
+                    ? `${exercise.duration || 20} minutes` 
+                    : `${exercise.originalSets || exercise.sets.length} sets x ${exercise.reps} reps`
+                  }
                 </div>
               </div>
               
@@ -2598,72 +2620,120 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
             {/* Sets (expanded when active) */}
             {activeExercise === exerciseIndex && (
               <div className="border-t border-gray-800">
-                <div className="p-4">
-                  <div className="text-xs text-gray-500 flex mb-3">
-                    <div className="w-8 text-center">#</div>
-                    <div className="flex-1 text-center">WEIGHT</div>
-                    <div className="flex-1 text-center">REPS</div>
-                    <div className="w-12 text-center">DONE</div>
+                {exercise.exerciseType === "cardio" ? (
+                  // Cardio exercise with duration
+                  <div className="p-4">
+                    <div className="text-xs text-gray-500 flex mb-3">
+                      <div className="w-8 text-center">#</div>
+                      <div className="flex-1 text-center">DURATION (MIN)</div>
+                      <div className="w-12 text-center">DONE</div>
+                    </div>
+                    
+                    {Array.isArray(exercise.sets) && exercise.sets.map((set: any, setIndex: number) => (
+                      <div key={set.id} className="flex items-center py-2 border-t border-gray-800/50">
+                        <div className="w-8 text-center text-sm">{setIndex + 1}</div>
+                        
+                        <div className="flex-1 px-2 flex justify-center">
+                          <input
+                            type="number"
+                            value={set.completedDuration || set.targetDuration || ''}
+                            onChange={(e) => updateSetDetails(
+                              exerciseIndex, 
+                              setIndex, 
+                              'completedDuration', 
+                              e.target.value
+                            )}
+                            className="w-48 bg-gray-800 rounded text-center py-2 focus:ring-1 focus:ring-neon-green outline-none"
+                            min="0"
+                            placeholder={set.targetDuration || "20"}
+                          />
+                        </div>
+                        
+                        <div className="w-12 flex justify-center">
+                          <button
+                            onClick={() => toggleSetCompletion(exercise.id, set.id)}
+                            className="w-6 h-6 flex items-center justify-center"
+                          >
+                            {completedSets.has(`${exercise.id}-${set.id}`) ? (
+                              <CheckCircle className="w-5 h-5 text-neon-green" />
+                            ) : (
+                              <Circle className="w-5 h-5 text-gray-600" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  
-                  {Array.isArray(exercise.sets) ? (
-                    exercise.sets.map((set: any, setIndex: number) => (
-                    <div key={set.id} className="flex items-center py-2 border-t border-gray-800/50">
-                      <div className="w-8 text-center text-sm">{set.number || setIndex + 1}</div>
-                      
-                      <div className="flex-1 px-2 flex justify-center">
-                        <input
-                          type="number"
-                          value={set.completedWeight || set.targetWeight || ''}
-                          onChange={(e) => updateSetDetails(
-                            exerciseIndex, 
-                            setIndex, 
-                            'completedWeight', 
-                            e.target.value
-                          )}
-                          className="w-48 bg-gray-800 rounded text-center py-2 focus:ring-1 focus:ring-neon-green outline-none"
-                          min="0"
-                          placeholder={set.targetWeight || "0"}
-                        />
-                      </div>
-                      
-                      <div className="flex-1 px-2 flex justify-center">
-                        <input
-                          type="number"
-                          value={set.completedReps || set.targetReps}
-                          onChange={(e) => updateSetDetails(
-                            exerciseIndex, 
-                            setIndex, 
-                            'completedReps', 
-                            e.target.value
-                          )}
-                          className="w-48 bg-gray-800 rounded text-center py-2 focus:ring-1 focus:ring-neon-green outline-none"
-                          min="0"
-                          placeholder="0"
-                        />
-                      </div>
-                      
-                      <div className="w-12 flex justify-center">
-                        <button
-                          onClick={() => toggleSetCompletion(exercise.id, set.id)}
-                          className="w-6 h-6 flex items-center justify-center"
-                        >
-                          {completedSets.has(`${exercise.id}-${set.id}`) ? (
-                            <CheckCircle className="w-5 h-5 text-neon-green" />
-                          ) : (
-                            <Circle className="w-5 h-5 text-gray-600" />
-                          )}
-                        </button>
-                      </div>
+                ) : (
+                  // Standard exercise with sets and reps
+                  <div className="p-4">
+                    <div className="text-xs text-gray-500 flex mb-3">
+                      <div className="w-8 text-center">#</div>
+                      <div className="flex-1 text-center">WEIGHT</div>
+                      <div className="flex-1 text-center">REPS</div>
+                      <div className="w-12 text-center">DONE</div>
                     </div>
-                    ))
-                  ) : (
-                    <div className="flex justify-center items-center py-4 text-gray-400">
-                      Click &quot;Add Set&quot; to add sets to this exercise
-                    </div>
-                  )}
-                </div>
+                    
+                    {Array.isArray(exercise.sets) ? (
+                      exercise.sets.map((set: any, setIndex: number) => (
+                        <div key={set.id} className="flex items-center py-2 border-t border-gray-800/50">
+                          <div className="w-8 text-center text-sm">{set.number || setIndex + 1}</div>
+                          
+                          <div className="flex-1 px-2 flex justify-center">
+                            <input
+                              type="number"
+                              value={set.completedWeight || set.targetWeight || ''}
+                              onChange={(e) => updateSetDetails(
+                                exerciseIndex, 
+                                setIndex, 
+                                'completedWeight', 
+                                e.target.value
+                              )}
+                              className="w-48 bg-gray-800 rounded text-center py-2 focus:ring-1 focus:ring-neon-green outline-none"
+                              min="0"
+                              placeholder={set.targetWeight || "0"}
+                            />
+                          </div>
+                          
+                          <div className="flex-1 px-2 flex justify-center">
+                            <input
+                              type="number"
+                              value={set.completedReps || set.targetReps}
+                              onChange={(e) => updateSetDetails(
+                                exerciseIndex, 
+                                setIndex, 
+                                'completedReps', 
+                                e.target.value
+                              )}
+                              className="w-48 bg-gray-800 rounded text-center py-2 focus:ring-1 focus:ring-neon-green outline-none"
+                              min="0"
+                              placeholder="0"
+                            />
+                          </div>
+                          
+                          <div className="w-12 flex justify-center">
+                            <button
+                              onClick={() => toggleSetCompletion(exercise.id, set.id)}
+                              className="w-6 h-6 flex items-center justify-center"
+                            >
+                              {completedSets.has(`${exercise.id}-${set.id}`) ? (
+                                <CheckCircle className="w-5 h-5 text-neon-green" />
+                              ) : (
+                                <Circle className="w-5 h-5 text-gray-600" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex justify-center items-center py-4 text-gray-400">
+                        Click &quot;Add Set&quot; to add sets to this exercise
+                      </div>
+                    )}
+                  </div>
+                )}
                 
+                {/* Footer controls - same for both types */}
                 <div className="p-4 border-t border-gray-800 bg-black/30">
                   <div className="flex justify-between items-center">
                     <div className="text-sm text-gray-400">
@@ -2686,14 +2756,14 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                       >
                         <Plus className="w-3 h-3 mr-1" /> Add Set
                       </button>
-                            <button 
-                              className="text-red-500 py-1 px-2 text-sm hover:bg-red-500/10 rounded"
-                              onClick={(e) => {
-                                e.stopPropagation(); // Prevent the exercise from toggling expand/collapse
-                                setExerciseToDelete(exercise);
-                                setDeleteModalOpen(true);
-                              }}
-                            >
+                      <button 
+                        className="text-red-500 py-1 px-2 text-sm hover:bg-red-500/10 rounded"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent the exercise from toggling expand/collapse
+                          setExerciseToDelete(exercise);
+                          setDeleteModalOpen(true);
+                        }}
+                      >
                         <Trash className="w-3 h-3" />
                       </button>
                     </div>
@@ -2831,7 +2901,7 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
       <Modal
         isOpen={addExerciseModalOpen}
         onClose={() => setAddExerciseModalOpen(false)}
-        title="Add Custom Exercise"
+        title="Add Exercise"
       >
         <div className="p-4">
           <div className="space-y-4">
@@ -2850,6 +2920,21 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
             </div>
             
             <div>
+              <label htmlFor="exercise-type" className="block text-sm font-medium text-gray-300 mb-1">
+                Exercise Type
+              </label>
+              <select
+                id="exercise-type"
+                value={newExercise.exerciseType}
+                onChange={(e) => setNewExercise({...newExercise, exerciseType: e.target.value})}
+                className="w-full bg-gray-800 rounded p-3 focus:ring-1 focus:ring-neon-green outline-none"
+              >
+                <option value="standard">Standard (Sets & Reps)</option>
+                <option value="cardio">Cardio (Time)</option>
+              </select>
+            </div>
+            
+            <div>
               <label htmlFor="muscle-group" className="block text-sm font-medium text-gray-300 mb-1">
                 Muscle Group
               </label>
@@ -2865,55 +2950,72 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                 <option value="legs">Legs</option>
                 <option value="arms">Arms</option>
                 <option value="core">Core</option>
+                <option value="cardio">Cardio</option>
                 <option value="other">Other</option>
               </select>
             </div>
             
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label htmlFor="sets" className="block text-sm font-medium text-gray-300 mb-1">
-                  Sets
+            {newExercise.exerciseType === "standard" ? (
+              <>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label htmlFor="sets" className="block text-sm font-medium text-gray-300 mb-1">
+                      Sets
+                    </label>
+                    <input
+                      id="sets"
+                      type="number"
+                      min="1"
+                      value={newExercise.sets}
+                      onChange={(e) => setNewExercise({...newExercise, sets: parseInt(e.target.value) || 1})}
+                      className="w-full bg-gray-800 rounded p-3 focus:ring-1 focus:ring-neon-green outline-none"
+                    />
+                  </div>
+                  
+                  <div className="flex-1">
+                    <label htmlFor="reps" className="block text-sm font-medium text-gray-300 mb-1">
+                      Target Reps
+                    </label>
+                    <input
+                      id="reps"
+                      type="number"
+                      min="1"
+                      value={newExercise.reps}
+                      onChange={(e) => setNewExercise({...newExercise, reps: parseInt(e.target.value) || 1})}
+                      className="w-full bg-gray-800 rounded p-3 focus:ring-1 focus:ring-neon-green outline-none"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label htmlFor="weight" className="block text-sm font-medium text-gray-300 mb-1">
+                    Starting Weight (Optional)
+                  </label>
+                  <input
+                    id="weight"
+                    type="text"
+                    placeholder="e.g., 135"
+                    value={newExercise.weight}
+                    onChange={(e) => setNewExercise({...newExercise, weight: e.target.value})}
+                    className="w-full bg-gray-800 rounded p-3 focus:ring-1 focus:ring-neon-green outline-none"
+                  />
+                </div>
+              </>
+            ) : (
+              <div>
+                <label htmlFor="duration" className="block text-sm font-medium text-gray-300 mb-1">
+                  Duration (minutes)
                 </label>
                 <input
-                  id="sets"
+                  id="duration"
                   type="number"
                   min="1"
-                  max="10"
-                  value={newExercise.sets}
-                  onChange={(e) => setNewExercise({...newExercise, sets: parseInt(e.target.value) || 1})}
+                  value={newExercise.duration}
+                  onChange={(e) => setNewExercise({...newExercise, duration: parseInt(e.target.value) || 1})}
                   className="w-full bg-gray-800 rounded p-3 focus:ring-1 focus:ring-neon-green outline-none"
                 />
               </div>
-              
-              <div className="flex-1">
-                <label htmlFor="reps" className="block text-sm font-medium text-gray-300 mb-1">
-                  Reps
-                </label>
-                <input
-                  id="reps"
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={newExercise.reps}
-                  onChange={(e) => setNewExercise({...newExercise, reps: parseInt(e.target.value) || 1})}
-                  className="w-full bg-gray-800 rounded p-3 focus:ring-1 focus:ring-neon-green outline-none"
-                />
-              </div>
-            </div>
-            
-            <div>
-              <label htmlFor="weight" className="block text-sm font-medium text-gray-300 mb-1">
-                Starting Weight (optional)
-              </label>
-              <input
-                id="weight"
-                type="text"
-                placeholder="e.g., 25"
-                value={newExercise.weight}
-                onChange={(e) => setNewExercise({...newExercise, weight: e.target.value})}
-                className="w-full bg-gray-800 rounded p-3 focus:ring-1 focus:ring-neon-green outline-none"
-              />
-            </div>
+            )}
             
             <div className="flex items-center gap-2 mt-2">
               <input
