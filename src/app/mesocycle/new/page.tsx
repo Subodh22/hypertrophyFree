@@ -98,6 +98,13 @@ const weeklyTemplates = {
     { day: "Thursday", name: "Upper Body B", muscleGroups: ["chest", "back", "shoulders", "arms"] },
     { day: "Friday", name: "Lower Body B", muscleGroups: ["legs"] },
   ],
+  "Nanu's Workout": [
+    { day: "Sunday", name: "Day 1: Pull Day (BACK + BICEP)", muscleGroups: ["back", "arms"] },
+    { day: "Sunday", name: "Day 2: GLUTES + HAMSTRING", muscleGroups: ["legs"] },
+    { day: "Thursday", name: "Day 3: Push Day (CHEST, SHOULDERS + TRICEPS)", muscleGroups: ["chest", "shoulders", "arms"] },
+    { day: "Thursday", name: "Day 4: QUADS-focused + CALVES", muscleGroups: ["legs"] },
+    { day: "Wednesday", name: "Day 5: CARDIO + ABS", muscleGroups: ["core"] },
+  ],
 };
 
 // Define exercise template type
@@ -348,9 +355,11 @@ export default function CreateMesocyclePage() {
     console.log('Selected template:', selectedTemplateName);
     console.log('Template config:', selectedTemplateConfig);
     
-    // Special handling for Dr. Israetel template
+    // Special handling for templates
     if (selectedTemplateName === "Dr. Israetel 4-Week Hypertrophy") {
       return createIsraetelHypertrophyTemplate();
+    } else if (selectedTemplateName === "Nanu's Workout") {
+      return createNanuWorkoutTemplate();
     }
     
     // Create a workout template for each day
@@ -748,6 +757,296 @@ export default function CreateMesocyclePage() {
       });
     }
     
+    return templates;
+  };
+  
+  // Special function to create Nanu's Workout template
+  const createNanuWorkoutTemplate = (): WeeklyWorkoutTemplate[] => {
+    const templates: WeeklyWorkoutTemplate[] = [];
+    
+    // Day 1: Pull Day (BACK + BICEP)
+    const pullDay: ExerciseTemplate[] = [
+      {
+        id: 'pull-ups-back',
+        name: 'Pull-Ups',
+        muscleGroup: 'back',
+        sets: 2,
+        reps: 4,
+        notes: 'Use thick band for assistance if needed'
+      },
+      {
+        id: 'wide-grip-pulldown-back',
+        name: 'Wide Grip Pulldown',
+        muscleGroup: 'back',
+        sets: 4,
+        reps: 8,
+        notes: 'Try close grip variation'
+      },
+      {
+        id: 'seated-iso-lat-rows-back',
+        name: 'Seated Iso-Lat Rows',
+        muscleGroup: 'back',
+        sets: 4,
+        reps: 8,
+        notes: 'Can substitute with Barbell Row'
+      },
+      {
+        id: 'bicep-curls-arms',
+        name: 'Bicep Curls',
+        muscleGroup: 'arms',
+        sets: 4,
+        reps: 10,
+        notes: 'Focus on full range of motion'
+      },
+      {
+        id: 'cable-curls-arms',
+        name: 'Cable Curls',
+        muscleGroup: 'arms',
+        sets: 4,
+        reps: 10,
+        notes: 'Progressive overload focus'
+      },
+      {
+        id: 'back-extensions',
+        name: 'Back Extensions',
+        muscleGroup: 'back',
+        sets: 4,
+        reps: 8,
+        notes: 'Add weight as needed'
+      },
+      {
+        id: 'stairmaster-cardio',
+        name: 'Stairmaster Routine',
+        muscleGroup: 'cardio',
+        sets: 1,
+        reps: 1,
+        notes: '15-20min: ~2 min hands resting (8kmh), ~2 min hands off (6kmh). Repeat until complete.'
+      }
+    ];
+
+    // Day 2: GLUTES + HAMSTRING
+    const glutesHamstringDay: ExerciseTemplate[] = [
+      {
+        id: 'glute-drive-machine',
+        name: 'Glute Drive Machine',
+        muscleGroup: 'legs',
+        sets: 4,
+        reps: 8,
+        notes: 'Superset with KAS Glute Bridge (4x8-10) and Hip Thrusts'
+      },
+      {
+        id: 'split-squat',
+        name: 'Split Squat',
+        muscleGroup: 'legs',
+        sets: 4,
+        reps: 8,
+        notes: 'Use dumbbells for added resistance'
+      },
+      {
+        id: 'stiff-rdl',
+        name: 'Stiff RDL',
+        muscleGroup: 'legs',
+        sets: 4,
+        reps: 8,
+        notes: 'Use dumbbells'
+      },
+      {
+        id: 'hip-extension',
+        name: 'Hip Extension',
+        muscleGroup: 'legs',
+        sets: 4,
+        reps: 8,
+        notes: 'Focus on glute contraction'
+      },
+      {
+        id: 'cardio-10min',
+        name: '10 Minutes Cardio',
+        muscleGroup: 'cardio',
+        sets: 1,
+        reps: 1,
+        notes: 'Light cardio for recovery'
+      }
+    ];
+
+    // Day 3: Push Day (CHEST, SHOULDERS + TRICEPS)
+    const pushDay: ExerciseTemplate[] = [
+      {
+        id: 'incline-dumbbell-press',
+        name: 'Incline Dumbbell Press',
+        muscleGroup: 'chest',
+        sets: 4,
+        reps: 8,
+        notes: 'Progressive weight increase'
+      },
+      {
+        id: 'chest-press-machine',
+        name: 'Chest Press Machine',
+        muscleGroup: 'chest',
+        sets: 4,
+        reps: 8,
+        notes: 'Alternate with Incline DB Press'
+      },
+      {
+        id: 'cable-chest-flys',
+        name: 'Cable Chest Flys',
+        muscleGroup: 'chest',
+        sets: 4,
+        reps: 10,
+        notes: 'Focus on squeezing chest'
+      },
+      {
+        id: 'shoulder-press',
+        name: 'Shoulder Press',
+        muscleGroup: 'shoulders',
+        sets: 4,
+        reps: 8,
+        notes: 'Dumbbell variation'
+      },
+      {
+        id: 'upright-row',
+        name: 'Upright Row',
+        muscleGroup: 'shoulders',
+        sets: 4,
+        reps: 8,
+        notes: 'Keep elbows high'
+      },
+      {
+        id: 'lateral-raises',
+        name: 'Lateral Raises',
+        muscleGroup: 'shoulders',
+        sets: 4,
+        reps: 8,
+        notes: 'Control the movement'
+      },
+      {
+        id: 'tricep-extension',
+        name: 'Tricep Extension',
+        muscleGroup: 'arms',
+        sets: 4,
+        reps: 10,
+        notes: '1 set warm up and 3 working sets'
+      },
+      {
+        id: 'stairmill-cardio',
+        name: 'Stairmill',
+        muscleGroup: 'cardio',
+        sets: 1,
+        reps: 1,
+        notes: '15 min at 7-9 km/h, include abs'
+      }
+    ];
+
+    // Day 4: QUADS-focused + CALVES
+    const quadsCalvesDay: ExerciseTemplate[] = [
+      {
+        id: 'goblet-squats',
+        name: 'Goblet Squats',
+        muscleGroup: 'legs',
+        sets: 4,
+        reps: 10,
+        notes: 'Superset, use dumbbells'
+      },
+      {
+        id: 'reverse-lunges',
+        name: 'Reverse Lunges',
+        muscleGroup: 'legs',
+        sets: 4,
+        reps: 8,
+        notes: 'Maintain balance throughout'
+      },
+      {
+        id: 'leg-extension-dropset',
+        name: 'Leg Extension Dropset',
+        muscleGroup: 'legs',
+        sets: 4,
+        reps: 10,
+        notes: '2x: 10,8,6 reps with decreasing weights'
+      },
+      {
+        id: 'calf-raises',
+        name: 'Calf Raises',
+        muscleGroup: 'legs',
+        sets: 4,
+        reps: 10,
+        notes: 'Add weight as you progress'
+      },
+      {
+        id: 'treadmill-incline',
+        name: 'Incline Treadmill',
+        muscleGroup: 'cardio',
+        sets: 1,
+        reps: 1,
+        notes: '15 mins at 12 incline'
+      }
+    ];
+
+    // Day 5: CARDIO + ABS
+    const cardioAbsDay: ExerciseTemplate[] = [
+      {
+        id: 'stairmaster-cardio-day5',
+        name: 'Stairmaster',
+        muscleGroup: 'cardio',
+        sets: 1,
+        reps: 1,
+        notes: '30 minutes session'
+      },
+      {
+        id: 'abs-circuit-1',
+        name: 'Abs Circuit I',
+        muscleGroup: 'core',
+        sets: 4,
+        reps: 1,
+        notes: 'V-Ups (10 reps) + Supported In/Out (20 reps)'
+      },
+      {
+        id: 'abs-circuit-2',
+        name: 'Abs Circuit II',
+        muscleGroup: 'core',
+        sets: 4,
+        reps: 1,
+        notes: 'Kick-outs (10 reps) + Leg Raises (10 reps)'
+      },
+      {
+        id: 'abs-circuit-3',
+        name: 'Abs Circuit III',
+        muscleGroup: 'core',
+        sets: 4,
+        reps: 1,
+        notes: 'Mountain Climbers (30 reps) + Burpees (10 reps)'
+      }
+    ];
+
+    // Add all workouts to the template
+    templates.push({
+      name: "Day 1: Pull Day (BACK + BICEP)",
+      days: [0], // Sunday
+      exercises: pullDay
+    });
+
+    templates.push({
+      name: "Day 2: GLUTES + HAMSTRING",
+      days: [0], // Sunday (alternate week)
+      exercises: glutesHamstringDay
+    });
+
+    templates.push({
+      name: "Day 3: Push Day (CHEST, SHOULDERS + TRICEPS)",
+      days: [4], // Thursday
+      exercises: pushDay
+    });
+
+    templates.push({
+      name: "Day 4: QUADS-focused + CALVES",
+      days: [4], // Thursday (alternate week)
+      exercises: quadsCalvesDay
+    });
+
+    templates.push({
+      name: "Day 5: CARDIO + ABS",
+      days: [3], // Wednesday
+      exercises: cardioAbsDay
+    });
+
     return templates;
   };
   
