@@ -569,7 +569,7 @@ export default function MesocycleProgress({ mesocycle }: MesocycleProgressProps)
                               <div className="flex flex-col mb-2">
                                 <h4 className="font-bold text-white">{exercise.name}</h4>
                                 <p className="text-sm text-gray-400">
-                                  {exercise.sets} sets x {exercise.reps} reps
+                                  {typeof exercise.sets === 'number' ? exercise.sets : (exercise.generatedSets?.length || exercise.sets)} sets x {exercise.reps} reps
                                 </p>
                               </div>
                               

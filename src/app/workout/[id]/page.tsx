@@ -215,14 +215,15 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
             });
           } else {
             // Create new generatedSets with only required fields
-            generatedSets = Array.from({ length: parseInt(exercise.sets) || 3 }, (_, i) => ({
+            const setsCount = typeof exercise.sets === 'number' ? exercise.sets : 3;
+            generatedSets = Array.from({ length: setsCount }, (_, i) => ({
             id: `${exercise.id}-set-${i+1}`,
             number: i + 1,
             targetReps: exercise.reps,
             targetWeight: exercise.weight || "",
             completedReps: "",
-            completedWeight: ""
-          }));
+              completedWeight: ""
+            }));
             console.log(`⭐ Created ${generatedSets.length} new generatedSets for ${exercise.name}`);
           }
           
@@ -243,8 +244,10 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
             }
           });
           
+          // Preserve the original sets property while adding the sets array
           return {
             ...exercise,
+            originalSets: exercise.sets, // Keep track of the original value
             sets: generatedSets
           };
         });
@@ -852,34 +855,33 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
   // Handle updating set details
   const updateSetDetails = (exerciseIndex: number, setIndex: number, field: string, value: any) => {
     // Clone exercises to avoid direct state mutation
-    const updatedExercises = [...exercises];
+    const updatedExercises = JSON.parse(JSON.stringify(exercises));
     const exercise = updatedExercises[exerciseIndex];
-    const set = exercise.sets[setIndex];
     
-    // Update the specified field
-    set[field] = value;
-    
-    // Auto-check the "done" mark if both weight and reps are filled
-    if (set.completedWeight && set.completedReps) {
-      const uniqueId = `${exercise.id}-${set.id}`;
-      
-      // Only add to completedSets if it's not already there
-      if (!completedSets.has(uniqueId)) {
-        console.log(`⭐ Auto-marking set as completed: ${exercise.name} set #${setIndex + 1}`);
-        setCompletedSets(prev => {
-          const newSet = new Set(prev);
-          newSet.add(uniqueId);
-          return newSet;
-        });
-        
-        // Also save the set data to Firebase (similar to what toggleSetCompletion does)
-        if (currentMesocycle && user) {
-          saveSetToFirebase(exercise.id, set.id, exercise, setIndex);
-        }
-      }
+    // Ensure the set property is writable by creating a fresh object
+    if (!exercise.sets[setIndex]) {
+      console.error("Set not found at index", setIndex);
+      return;
     }
     
+    // Create a new set object with the updated field
+    const oldSet = exercise.sets[setIndex];
+    const newSet = {
+      ...oldSet,
+      [field]: value
+    };
+    
+    // Replace the old set with the new one
+    exercise.sets[setIndex] = newSet;
+    
+    // Update the exercises state
     setExercises(updatedExercises);
+    
+    // Save to Firebase if the set is already marked as completed
+    const uniqueId = `${exercise.id}-${newSet.id}`;
+    if (completedSets.has(uniqueId) && currentMesocycle && user) {
+      saveSetToFirebase(exercise.id, newSet.id, exercise, setIndex);
+    }
   };
   
   // Function to save set data to Firebase
@@ -2206,8 +2208,13 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
       
       console.log(`⭐ Adding new exercise: ${newExercise.name} with ${newExercise.sets} sets`);
       
-      // Add to local state immediately
-      setExercises(prevExercises => [...prevExercises, exerciseToAdd]);
+      // Add to local state immediately with the correct structure for UI rendering
+      const exerciseForUI = {
+        ...exerciseToAdd,
+        originalSets: exerciseToAdd.sets, // Store the number in originalSets
+        sets: generatedSets // Store the array in sets for UI rendering
+      };
+      setExercises(prevExercises => [...prevExercises, exerciseForUI]);
       
       // Extract the correct week number from the weekNum field directly
       const weekKey = `week${workout.week || workout.weekNum}`;
@@ -2563,7 +2570,7 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
               <div className="flex justify-between items-center">
                 <h3 className="font-bold">{exercise.name}</h3>
                 <div className="text-sm text-gray-400">
-                  {exercise.sets.length} sets x {exercise.reps} reps
+                  {exercise.originalSets || exercise.sets.length} sets x {exercise.reps} reps
                 </div>
               </div>
               
@@ -2599,7 +2606,8 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                     <div className="w-12 text-center">DONE</div>
                   </div>
                   
-                  {exercise.sets.map((set: any, setIndex: number) => (
+                  {Array.isArray(exercise.sets) ? (
+                    exercise.sets.map((set: any, setIndex: number) => (
                     <div key={set.id} className="flex items-center py-2 border-t border-gray-800/50">
                       <div className="w-8 text-center text-sm">{set.number || setIndex + 1}</div>
                       
@@ -2648,17 +2656,25 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                         </button>
                       </div>
                     </div>
-                  ))}
+                    ))
+                  ) : (
+                    <div className="flex justify-center items-center py-4 text-gray-400">
+                      Click &quot;Add Set&quot; to add sets to this exercise
+                    </div>
+                  )}
                 </div>
                 
                 <div className="p-4 border-t border-gray-800 bg-black/30">
                   <div className="flex justify-between items-center">
                     <div className="text-sm text-gray-400">
                       <span className="text-neon-green font-medium">
-                        {exercise.sets.filter((_: any, i: number) => 
+                        {Array.isArray(exercise.sets) 
+                          ? exercise.sets.filter((_: any, i: number) => 
                           completedSets.has(`${exercise.id}-${exercise.sets[i].id}`)
-                        ).length}
-                      </span> / {exercise.sets.length} sets completed
+                            ).length
+                          : 0
+                        }
+                      </span> / {exercise.originalSets || (Array.isArray(exercise.sets) ? exercise.sets.length : 0)} sets completed
                     </div>
                     <div className="flex gap-2">
                       <button 
