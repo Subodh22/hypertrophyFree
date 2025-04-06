@@ -72,6 +72,22 @@ const exerciseTemplates = {
     { id: 'reverse-curl', name: 'Reverse Curls', targetSets: 3, targetReps: 12, targetRIR: 1 },
     { id: 'spider-curl', name: 'Spider Curls', targetSets: 4, targetReps: 12, targetRIR: 1 },
   ],
+  core: [
+    { id: 'v-ups', name: 'V-Ups', targetSets: 3, targetReps: 15, targetRIR: 1 },
+    { id: 'leg-raises', name: 'Leg Raises', targetSets: 3, targetReps: 15, targetRIR: 1 },
+    { id: 'supported-in-out', name: 'Supported In/Out', targetSets: 3, targetReps: 20, targetRIR: 1 },
+    { id: 'kickouts', name: 'Kick-outs', targetSets: 3, targetReps: 15, targetRIR: 1 },
+    { id: 'mountain-climbers', name: 'Mountain Climbers', targetSets: 3, targetReps: 30, targetRIR: 1 },
+    { id: 'burpees', name: 'Burpees', targetSets: 3, targetReps: 10, targetRIR: 1 },
+    { id: 'planks', name: 'Planks', targetSets: 3, targetReps: 45, targetRIR: 1 },
+    { id: 'russian-twist', name: 'Russian Twists', targetSets: 3, targetReps: 15, targetRIR: 1 },
+    { id: 'bicycle-crunch', name: 'Bicycle Crunches', targetSets: 3, targetReps: 20, targetRIR: 1 },
+  ],
+  cardio: [
+    { id: 'stairmaster', name: 'Stairmaster', targetSets: 1, targetReps: 20, targetRIR: 0 },
+    { id: 'treadmill', name: 'Treadmill', targetSets: 1, targetReps: 20, targetRIR: 0 },
+    { id: 'stationary-bike', name: 'Stationary Bike', targetSets: 1, targetReps: 20, targetRIR: 0 },
+  ],
 };
 
 // Sample 4-week templates
@@ -1300,24 +1316,27 @@ export default function CreateMesocyclePage() {
                                 </div>
                                 
                                 <div className="ml-2">
-                                  {exerciseTemplates[group as keyof typeof exerciseTemplates].map((exercise, exIndex) => {
-                                    // Apply progressive overload calculations
-                                    const weeklyOverload = (weekNumber - 1) * (progression / 100);
-                                    const adjustedWeight = 1 + weeklyOverload;
-                                    let repAdjustment = 0;
-                                    if (weekNumber > 1) repAdjustment = -1;
-                                    if (weekNumber > 2) repAdjustment = -2;
-                                    
-                                    return (
-                                      <div key={exIndex} className="text-sm py-1 flex flex-wrap items-center">
-                                        <span className="font-medium mr-2">{exercise.name}</span>
-                                        <span className="text-gray-400">
-                                          {exercise.targetSets} × {Math.max(4, exercise.targetReps + repAdjustment)} 
-                                          {weekNumber > 1 ? ` (${Math.round(adjustedWeight * 100)}% weight)` : ''}
-                                        </span>
-                                      </div>
-                                    );
-                                  })}
+                                  {/* Check if group exists in exerciseTemplates before mapping */}
+                                  {exerciseTemplates[group as keyof typeof exerciseTemplates] ? 
+                                    exerciseTemplates[group as keyof typeof exerciseTemplates].map((exercise, exIndex) => {
+                                      // Apply progressive overload calculations
+                                      const weeklyOverload = (weekNumber - 1) * (progression / 100);
+                                      const adjustedWeight = 1 + weeklyOverload;
+                                      let repAdjustment = 0;
+                                      if (weekNumber > 1) repAdjustment = -1;
+                                      if (weekNumber > 2) repAdjustment = -2;
+                                      
+                                      return (
+                                        <div key={exIndex} className="text-sm py-1 flex flex-wrap items-center">
+                                          <span className="font-medium mr-2">{exercise.name}</span>
+                                          <span className="text-gray-400">
+                                            {exercise.targetSets} × {Math.max(4, exercise.targetReps + repAdjustment)} 
+                                            {weekNumber > 1 ? ` (${Math.round(adjustedWeight * 100)}% weight)` : ''}
+                                          </span>
+                                        </div>
+                                      );
+                                    })
+                                  : <div className="text-sm text-gray-500">Custom exercises will be used</div>}
                                 </div>
                               </div>
                             ))}
