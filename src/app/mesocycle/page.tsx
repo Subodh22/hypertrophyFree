@@ -111,7 +111,7 @@ export default function MesocyclePage() {
                 </p>
               </div>
               <Link
-                href={`/mesocycle/${currentMesocycle.id}`}
+                href={`/mesocycle/${currentMesocycle.id}?t=${Date.now()}`}
                 className="btn-secondary py-1 px-3 h-fit text-sm"
               >
                 View
@@ -194,7 +194,7 @@ export default function MesocyclePage() {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold">Week {currentWeek} Workouts</h3>
                 <Link 
-                  href={`/mesocycle/${currentMesocycle.id}`}
+                  href={`/mesocycle/${currentMesocycle.id}?t=${Date.now()}`}
                   className="flex items-center gap-1 text-neon-green text-sm hover:underline"
                 >
                   <Plus className="w-4 h-4" /> Add Workout
@@ -264,7 +264,7 @@ export default function MesocyclePage() {
                 <div className="bg-black/20 p-6 rounded-lg text-center">
                   <p className="text-gray-400 mb-3">No workouts planned for Week {currentWeek}</p>
                   <Link 
-                    href={`/mesocycle/${currentMesocycle.id}`}
+                    href={`/mesocycle/${currentMesocycle.id}?t=${Date.now()}`}
                     className="btn-primary inline-flex items-center gap-2"
                   >
                     <Plus className="w-4 h-4" /> Add Workout
@@ -302,7 +302,7 @@ export default function MesocyclePage() {
                     </div>
                   </div>
                   <Link
-                    href={`/mesocycle/${mesocycle.id}`}
+                    href={`/mesocycle/${mesocycle.id}?t=${Date.now()}`}
                     className="text-neon-green hover:underline flex items-center gap-1"
                   >
                     View <ChevronRight className="w-4 h-4" />

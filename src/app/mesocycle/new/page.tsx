@@ -12,81 +12,81 @@ import { useAuth } from '@/lib/hooks/useAuth';
 // Exercise templates organized by muscle groups
 const exerciseTemplates = {
   chest: [
-    { id: 'bench-press', name: 'Barbell Bench Press', targetSets: 4, targetReps: 8, targetRIR: 2 },
-    { id: 'incline-press', name: 'Incline Dumbbell Press', targetSets: 3, targetReps: 10, targetRIR: 2 },
-    { id: 'chest-fly', name: 'Cable Chest Fly', targetSets: 3, targetReps: 12, targetRIR: 1 },
-    { id: 'dips', name: 'Chest Dips', targetSets: 3, targetReps: 10, targetRIR: 2 },
-    { id: 'incline-barbell-press', name: 'Incline Barbell Press', targetSets: 4, targetReps: 8, targetRIR: 2 },
-    { id: 'flat-dumbbell-press', name: 'Flat Dumbbell Press', targetSets: 4, targetReps: 10, targetRIR: 2 },
-    { id: 'close-grip-bench', name: 'Close-Grip Bench Press', targetSets: 4, targetReps: 10, targetRIR: 2 },
+    { id: 'bench-press', name: 'Barbell Bench Press', targetSets: 4, targetReps: 8, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'incline-press', name: 'Incline Dumbbell Press', targetSets: 3, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'chest-fly', name: 'Cable Chest Fly', targetSets: 3, targetReps: 12, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'dips', name: 'Chest Dips', targetSets: 3, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'incline-barbell-press', name: 'Incline Barbell Press', targetSets: 4, targetReps: 8, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'flat-dumbbell-press', name: 'Flat Dumbbell Press', targetSets: 4, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'close-grip-bench', name: 'Close-Grip Bench Press', targetSets: 4, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
   ],
   back: [
-    { id: 'pull-up', name: 'Pull-ups', targetSets: 4, targetReps: 8, targetRIR: 2 },
-    { id: 'barbell-row', name: 'Barbell Row', targetSets: 4, targetReps: 10, targetRIR: 2 },
-    { id: 'lat-pulldown', name: 'Lat Pulldown', targetSets: 3, targetReps: 12, targetRIR: 1 },
-    { id: 'cable-row', name: 'Seated Cable Row', targetSets: 3, targetReps: 12, targetRIR: 1 },
-    { id: 'pendlay-row', name: 'Pendlay Row', targetSets: 4, targetReps: 8, targetRIR: 2 },
-    { id: 'bent-over-row', name: 'Bent-Over Barbell Row', targetSets: 4, targetReps: 8, targetRIR: 2 },
-    { id: 'chin-up', name: 'Chin-Ups', targetSets: 4, targetReps: 8, targetRIR: 2 },
-    { id: 'weighted-pull-up', name: 'Weighted Pull-Ups', targetSets: 4, targetReps: 8, targetRIR: 2 },
-    { id: 'tbar-row', name: 'T-Bar Rows', targetSets: 4, targetReps: 10, targetRIR: 2 },
-    { id: 'single-arm-row', name: 'Single-Arm Dumbbell Row', targetSets: 4, targetReps: 10, targetRIR: 2 },
-    { id: 'chest-supported-row', name: 'Chest-Supported Row', targetSets: 4, targetReps: 10, targetRIR: 2 },
-    { id: 'face-pull', name: 'Face Pulls', targetSets: 3, targetReps: 15, targetRIR: 1 },
+    { id: 'pull-up', name: 'Pull-ups', targetSets: 4, targetReps: 8, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'barbell-row', name: 'Barbell Row', targetSets: 4, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'lat-pulldown', name: 'Lat Pulldown', targetSets: 3, targetReps: 12, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'cable-row', name: 'Seated Cable Row', targetSets: 3, targetReps: 12, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'pendlay-row', name: 'Pendlay Row', targetSets: 4, targetReps: 8, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'bent-over-row', name: 'Bent-Over Barbell Row', targetSets: 4, targetReps: 8, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'chin-up', name: 'Chin-Ups', targetSets: 4, targetReps: 8, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'weighted-pull-up', name: 'Weighted Pull-Ups', targetSets: 4, targetReps: 8, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'tbar-row', name: 'T-Bar Rows', targetSets: 4, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'single-arm-row', name: 'Single-Arm Dumbbell Row', targetSets: 4, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'chest-supported-row', name: 'Chest-Supported Row', targetSets: 4, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'face-pull', name: 'Face Pulls', targetSets: 3, targetReps: 15, targetRIR: 1, exerciseType: 'strength', duration: 0 },
   ],
   legs: [
-    { id: 'squat', name: 'Barbell Squat', targetSets: 4, targetReps: 8, targetRIR: 2 },
-    { id: 'deadlift', name: 'Deadlift', targetSets: 4, targetReps: 6, targetRIR: 2 },
-    { id: 'leg-press', name: 'Leg Press', targetSets: 3, targetReps: 12, targetRIR: 1 },
-    { id: 'leg-extension', name: 'Leg Extension', targetSets: 3, targetReps: 15, targetRIR: 1 },
-    { id: 'leg-curl', name: 'Leg Curl', targetSets: 3, targetReps: 12, targetRIR: 1 },
-    { id: 'front-squat', name: 'Front Squat', targetSets: 4, targetReps: 8, targetRIR: 2 },
-    { id: 'rdl', name: 'Romanian Deadlift', targetSets: 3, targetReps: 10, targetRIR: 2 },
-    { id: 'walking-lunge', name: 'Walking Lunges', targetSets: 3, targetReps: 10, targetRIR: 2 },
-    { id: 'calf-raise', name: 'Standing Calf Raises', targetSets: 3, targetReps: 15, targetRIR: 1 },
-    { id: 'seated-calf-raise', name: 'Seated Calf Raises', targetSets: 3, targetReps: 15, targetRIR: 1 },
-    { id: 'hip-thrust', name: 'Hip Thrusts', targetSets: 3, targetReps: 10, targetRIR: 2 },
-    { id: 'hack-squat', name: 'Hack Squats', targetSets: 4, targetReps: 10, targetRIR: 2 },
-    { id: 'safety-bar-squat', name: 'Safety Bar Squats', targetSets: 4, targetReps: 8, targetRIR: 2 },
-    { id: 'stiff-legged-deadlift', name: 'Stiff-Legged Deadlifts', targetSets: 4, targetReps: 10, targetRIR: 2 },
-    { id: 'bulgarian-split-squat', name: 'Bulgarian Split Squats', targetSets: 3, targetReps: 10, targetRIR: 2 },
+    { id: 'squat', name: 'Barbell Squat', targetSets: 4, targetReps: 8, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'deadlift', name: 'Deadlift', targetSets: 4, targetReps: 6, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'leg-press', name: 'Leg Press', targetSets: 3, targetReps: 12, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'leg-extension', name: 'Leg Extension', targetSets: 3, targetReps: 15, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'leg-curl', name: 'Leg Curl', targetSets: 3, targetReps: 12, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'front-squat', name: 'Front Squat', targetSets: 4, targetReps: 8, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'rdl', name: 'Romanian Deadlift', targetSets: 3, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'walking-lunge', name: 'Walking Lunges', targetSets: 3, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'calf-raise', name: 'Standing Calf Raises', targetSets: 3, targetReps: 15, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'seated-calf-raise', name: 'Seated Calf Raises', targetSets: 3, targetReps: 15, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'hip-thrust', name: 'Hip Thrusts', targetSets: 3, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'hack-squat', name: 'Hack Squats', targetSets: 4, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'safety-bar-squat', name: 'Safety Bar Squats', targetSets: 4, targetReps: 8, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'stiff-legged-deadlift', name: 'Stiff-Legged Deadlifts', targetSets: 4, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'bulgarian-split-squat', name: 'Bulgarian Split Squats', targetSets: 3, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
   ],
   shoulders: [
-    { id: 'military-press', name: 'Standing Barbell Military Press', targetSets: 3, targetReps: 8, targetRIR: 2 },
-    { id: 'db-shoulder-press', name: 'Seated Dumbbell Shoulder Press', targetSets: 3, targetReps: 10, targetRIR: 2 },
-    { id: 'lateral-raise', name: 'Lateral Raises', targetSets: 3, targetReps: 15, targetRIR: 1 },
-    { id: 'push-press', name: 'Push Press', targetSets: 4, targetReps: 8, targetRIR: 2 },
-    { id: 'arnold-press', name: 'Arnold Presses', targetSets: 4, targetReps: 10, targetRIR: 2 },
-    { id: 'upright-row', name: 'Upright Rows', targetSets: 4, targetReps: 12, targetRIR: 1 },
+    { id: 'military-press', name: 'Standing Barbell Military Press', targetSets: 3, targetReps: 8, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'db-shoulder-press', name: 'Seated Dumbbell Shoulder Press', targetSets: 3, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'lateral-raise', name: 'Lateral Raises', targetSets: 3, targetReps: 15, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'push-press', name: 'Push Press', targetSets: 4, targetReps: 8, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'arnold-press', name: 'Arnold Presses', targetSets: 4, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'upright-row', name: 'Upright Rows', targetSets: 4, targetReps: 12, targetRIR: 1, exerciseType: 'strength', duration: 0 },
   ],
   arms: [
-    { id: 'tricep-pushdown', name: 'Tricep Pushdowns', targetSets: 3, targetReps: 12, targetRIR: 1 },
-    { id: 'ez-curl', name: 'EZ-Bar Curls', targetSets: 3, targetReps: 10, targetRIR: 1 },
-    { id: 'hammer-curl', name: 'Hammer Curls', targetSets: 3, targetReps: 12, targetRIR: 1 },
-    { id: 'overhead-extension', name: 'Overhead Tricep Extensions', targetSets: 3, targetReps: 12, targetRIR: 1 },
-    { id: 'dips', name: 'Dips', targetSets: 4, targetReps: 10, targetRIR: 2 },
-    { id: 'incline-curl', name: 'Incline Dumbbell Curls', targetSets: 4, targetReps: 10, targetRIR: 1 },
-    { id: 'cable-curl', name: 'Cable Curls', targetSets: 4, targetReps: 12, targetRIR: 1 },
-    { id: 'preacher-curl', name: 'Preacher Curls', targetSets: 4, targetReps: 10, targetRIR: 1 },
-    { id: 'rope-pushdown', name: 'Rope Pushdowns', targetSets: 4, targetReps: 12, targetRIR: 1 },
-    { id: 'reverse-curl', name: 'Reverse Curls', targetSets: 3, targetReps: 12, targetRIR: 1 },
-    { id: 'spider-curl', name: 'Spider Curls', targetSets: 4, targetReps: 12, targetRIR: 1 },
+    { id: 'tricep-pushdown', name: 'Tricep Pushdowns', targetSets: 3, targetReps: 12, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'ez-curl', name: 'EZ-Bar Curls', targetSets: 3, targetReps: 10, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'hammer-curl', name: 'Hammer Curls', targetSets: 3, targetReps: 12, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'overhead-extension', name: 'Overhead Tricep Extensions', targetSets: 3, targetReps: 12, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'dips', name: 'Dips', targetSets: 4, targetReps: 10, targetRIR: 2, exerciseType: 'strength', duration: 0 },
+    { id: 'incline-curl', name: 'Incline Dumbbell Curls', targetSets: 4, targetReps: 10, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'cable-curl', name: 'Cable Curls', targetSets: 4, targetReps: 12, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'preacher-curl', name: 'Preacher Curls', targetSets: 4, targetReps: 10, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'rope-pushdown', name: 'Rope Pushdowns', targetSets: 4, targetReps: 12, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'reverse-curl', name: 'Reverse Curls', targetSets: 3, targetReps: 12, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'spider-curl', name: 'Spider Curls', targetSets: 4, targetReps: 12, targetRIR: 1, exerciseType: 'strength', duration: 0 },
   ],
   core: [
-    { id: 'v-ups', name: 'V-Ups', targetSets: 3, targetReps: 15, targetRIR: 1 },
-    { id: 'leg-raises', name: 'Leg Raises', targetSets: 3, targetReps: 15, targetRIR: 1 },
-    { id: 'supported-in-out', name: 'Supported In/Out', targetSets: 3, targetReps: 20, targetRIR: 1 },
-    { id: 'kickouts', name: 'Kick-outs', targetSets: 3, targetReps: 15, targetRIR: 1 },
-    { id: 'mountain-climbers', name: 'Mountain Climbers', targetSets: 3, targetReps: 30, targetRIR: 1 },
-    { id: 'burpees', name: 'Burpees', targetSets: 3, targetReps: 10, targetRIR: 1 },
-    { id: 'planks', name: 'Planks', targetSets: 3, targetReps: 45, targetRIR: 1 },
-    { id: 'russian-twist', name: 'Russian Twists', targetSets: 3, targetReps: 15, targetRIR: 1 },
-    { id: 'bicycle-crunch', name: 'Bicycle Crunches', targetSets: 3, targetReps: 20, targetRIR: 1 },
+    { id: 'v-ups', name: 'V-Ups', targetSets: 3, targetReps: 15, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'leg-raises', name: 'Leg Raises', targetSets: 3, targetReps: 15, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'supported-in-out', name: 'Supported In/Out', targetSets: 3, targetReps: 20, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'kickouts', name: 'Kick-outs', targetSets: 3, targetReps: 15, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'mountain-climbers', name: 'Mountain Climbers', targetSets: 3, targetReps: 30, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'burpees', name: 'Burpees', targetSets: 3, targetReps: 10, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'planks', name: 'Planks', targetSets: 3, targetReps: 45, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'russian-twist', name: 'Russian Twists', targetSets: 3, targetReps: 15, targetRIR: 1, exerciseType: 'strength', duration: 0 },
+    { id: 'bicycle-crunch', name: 'Bicycle Crunches', targetSets: 3, targetReps: 20, targetRIR: 1, exerciseType: 'strength', duration: 0 },
   ],
   cardio: [
-    { id: 'stairmaster', name: 'Stairmaster', targetSets: 1, targetReps: 20, targetRIR: 0 },
-    { id: 'treadmill', name: 'Treadmill', targetSets: 1, targetReps: 20, targetRIR: 0 },
-    { id: 'stationary-bike', name: 'Stationary Bike', targetSets: 1, targetReps: 20, targetRIR: 0 },
+    { id: 'stairmaster', name: 'Stairmaster', targetSets: 1, targetReps: 1, targetRIR: 0, exerciseType: 'cardio', duration: 20 },
+    { id: 'treadmill', name: 'Treadmill', targetSets: 1, targetReps: 1, targetRIR: 0, exerciseType: 'cardio', duration: 20 },
+    { id: 'stationary-bike', name: 'Stationary Bike', targetSets: 1, targetReps: 1, targetRIR: 0, exerciseType: 'cardio', duration: 20 },
   ],
 };
 
@@ -131,6 +131,8 @@ export type ExerciseTemplate = {
   sets: number;
   reps: number;
   notes?: string;
+  exerciseType?: string; // 'strength' or 'cardio'
+  duration?: number; // in minutes, for cardio exercises
 };
 
 // Define workout data type
@@ -399,7 +401,9 @@ export default function CreateMesocyclePage() {
             muscleGroup: muscleGroup,
             sets: exercise.targetSets,
             reps: exercise.targetReps,
-            notes: undefined // Use undefined instead of accessing non-existent property
+            notes: undefined, // Use undefined instead of accessing non-existent property
+            exerciseType: exercise.exerciseType,
+            duration: exercise.duration
           });
         });
       });
@@ -453,7 +457,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'chest',
         sets: 4,
         reps: 8,
-        notes: 'Progressive overload focus, 3-4 RIR in week 1, 0-1 RIR by week 4'
+        notes: 'Progressive overload focus, 3-4 RIR in week 1, 0-1 RIR by week 4',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'bent-over-row-back',
@@ -461,7 +467,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'back',
         sets: 4,
         reps: 8,
-        notes: 'Focus on controlled eccentric phase'
+        notes: 'Focus on controlled eccentric phase',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'military-press-shoulders',
@@ -469,7 +477,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'shoulders',
         sets: 3,
         reps: 8,
-        notes: 'Maintain tight core for stability'
+        notes: 'Maintain tight core for stability',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'pull-up-back',
@@ -477,7 +487,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'back',
         sets: 3,
         reps: 10,
-        notes: 'Use assisted pull-ups if needed'
+        notes: 'Use assisted pull-ups if needed',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'tricep-pushdown-arms',
@@ -485,7 +497,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'arms',
         sets: 3,
         reps: 12,
-        notes: 'Focus on full extension'
+        notes: 'Focus on full extension',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'ez-curl-arms',
@@ -493,7 +507,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'arms',
         sets: 3,
         reps: 10,
-        notes: 'Controlled tempo'
+        notes: 'Controlled tempo',
+        exerciseType: 'strength',
+        duration: 0
       }
     ];
     
@@ -505,7 +521,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 4,
         reps: 8,
-        notes: 'Focus on depth and knee tracking'
+        notes: 'Focus on depth and knee tracking',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'rdl-legs',
@@ -513,7 +531,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 3,
         reps: 10,
-        notes: 'Maintain flat back throughout movement'
+        notes: 'Maintain flat back throughout movement',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'leg-press-legs',
@@ -521,7 +541,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 3,
         reps: 12,
-        notes: 'Full range of motion'
+        notes: 'Full range of motion',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'leg-curl-legs',
@@ -529,7 +551,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 3,
         reps: 12,
-        notes: 'Control the eccentric phase'
+        notes: 'Control the eccentric phase',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'calf-raise-legs',
@@ -537,7 +561,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 3,
         reps: 15,
-        notes: 'Full stretch at bottom, full contraction at top'
+        notes: 'Full stretch at bottom, full contraction at top',
+        exerciseType: 'strength',
+        duration: 0
       }
     ];
     
@@ -549,7 +575,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'chest',
         sets: 4,
         reps: 10,
-        notes: 'Focus on upper chest activation'
+        notes: 'Focus on upper chest activation',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'cable-row-back',
@@ -557,7 +585,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'back',
         sets: 4,
         reps: 10,
-        notes: 'Squeeze shoulder blades together'
+        notes: 'Squeeze shoulder blades together',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'lateral-raise-shoulders',
@@ -565,7 +595,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'shoulders',
         sets: 3,
         reps: 15,
-        notes: 'Keep slight bend in elbows'
+        notes: 'Keep slight bend in elbows',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'face-pull-back',
@@ -573,7 +605,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'back',
         sets: 3,
         reps: 15,
-        notes: 'Focus on external rotation at end range'
+        notes: 'Focus on external rotation at end range',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'overhead-extension-arms',
@@ -581,7 +615,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'arms',
         sets: 3,
         reps: 12,
-        notes: 'Keep elbows close to head'
+        notes: 'Keep elbows close to head',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'hammer-curl-arms',
@@ -589,7 +625,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'arms',
         sets: 3,
         reps: 12,
-        notes: 'Focus on brachialis development'
+        notes: 'Focus on brachialis development',
+        exerciseType: 'strength',
+        duration: 0
       }
     ];
     
@@ -601,7 +639,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 4,
         reps: 8,
-        notes: 'Maintain upright torso'
+        notes: 'Maintain upright torso',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'hip-thrust-legs',
@@ -609,7 +649,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 3,
         reps: 10,
-        notes: 'Full hip extension at top'
+        notes: 'Full hip extension at top',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'walking-lunge-legs',
@@ -617,7 +659,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 3,
         reps: 10,
-        notes: '10 steps per leg'
+        notes: '10 steps per leg',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'leg-extension-legs',
@@ -625,7 +669,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 3,
         reps: 15,
-        notes: 'Focus on quad contraction'
+        notes: 'Focus on quad contraction',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'seated-calf-raise-legs',
@@ -633,7 +679,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 3,
         reps: 15,
-        notes: 'Emphasize soleus activation'
+        notes: 'Emphasize soleus activation',
+        exerciseType: 'strength',
+        duration: 0
       }
     ];
     
@@ -645,7 +693,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'chest',
         sets: 3,
         reps: 12,
-        notes: 'Deload week: reduced weight, moderate reps'
+        notes: 'Deload week: reduced weight, moderate reps',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'lat-pulldown-back',
@@ -653,7 +703,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'back',
         sets: 3,
         reps: 12,
-        notes: 'Deload week: focus on technique'
+        notes: 'Deload week: focus on technique',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'lateral-raise-shoulders',
@@ -661,7 +713,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'shoulders',
         sets: 2,
         reps: 15,
-        notes: 'Light weight, focus on controlled motion'
+        notes: 'Light weight, focus on controlled motion',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'face-pull-back',
@@ -669,7 +723,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'back',
         sets: 2,
         reps: 15,
-        notes: 'Emphasize scapular retraction'
+        notes: 'Emphasize scapular retraction',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'tricep-pushdown-arms',
@@ -677,7 +733,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'arms',
         sets: 2,
         reps: 15,
-        notes: 'Light weight, focus on contraction'
+        notes: 'Light weight, focus on contraction',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'dumbbell-curl-arms',
@@ -685,7 +743,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'arms',
         sets: 2,
         reps: 15,
-        notes: 'Controlled tempo'
+        notes: 'Controlled tempo',
+        exerciseType: 'strength',
+        duration: 0
       }
     ];
     
@@ -697,7 +757,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 3,
         reps: 12,
-        notes: 'Deload week: reduced weight, focus on form'
+        notes: 'Deload week: reduced weight, focus on form',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'rdl-legs',
@@ -705,7 +767,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 3,
         reps: 12,
-        notes: 'Light weight, perfect form'
+        notes: 'Light weight, perfect form',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'leg-curl-legs',
@@ -713,7 +777,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 2,
         reps: 15,
-        notes: 'Focus on hamstring contraction'
+        notes: 'Focus on hamstring contraction',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'leg-extension-legs',
@@ -721,7 +787,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 2,
         reps: 15,
-        notes: 'Light weight, full range of motion'
+        notes: 'Light weight, full range of motion',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'calf-raise-legs',
@@ -729,7 +797,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 2,
         reps: 20,
-        notes: 'Focus on full stretch and contraction'
+        notes: 'Focus on full stretch and contraction',
+        exerciseType: 'strength',
+        duration: 0
       }
     ];
     
@@ -788,7 +858,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'back',
         sets: 2,
         reps: 4,
-        notes: 'Use thick band for assistance if needed'
+        notes: 'Use thick band for assistance if needed',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'wide-grip-pulldown-back',
@@ -796,7 +868,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'back',
         sets: 4,
         reps: 8,
-        notes: 'Try close grip variation'
+        notes: 'Try close grip variation',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'seated-iso-lat-rows-back',
@@ -804,7 +878,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'back',
         sets: 4,
         reps: 8,
-        notes: 'Can substitute with Barbell Row'
+        notes: 'Can substitute with Barbell Row',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'bicep-curls-arms',
@@ -812,7 +888,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'arms',
         sets: 4,
         reps: 10,
-        notes: 'Focus on full range of motion'
+        notes: 'Focus on full range of motion',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'cable-curls-arms',
@@ -820,7 +898,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'arms',
         sets: 4,
         reps: 10,
-        notes: 'Progressive overload focus'
+        notes: 'Progressive overload focus',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'back-extensions',
@@ -828,7 +908,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'back',
         sets: 4,
         reps: 8,
-        notes: 'Add weight as needed'
+        notes: 'Add weight as needed',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'stairmaster-cardio',
@@ -836,7 +918,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'cardio',
         sets: 1,
         reps: 1,
-        notes: '15-20min: ~2 min hands resting (8kmh), ~2 min hands off (6kmh). Repeat until complete.'
+        notes: '15-20min: ~2 min hands resting (8kmh), ~2 min hands off (6kmh). Repeat until complete.',
+        exerciseType: 'cardio',
+        duration: 20
       }
     ];
 
@@ -848,7 +932,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 4,
         reps: 8,
-        notes: 'Superset with KAS Glute Bridge (4x8-10) and Hip Thrusts'
+        notes: 'Superset with KAS Glute Bridge (4x8-10) and Hip Thrusts',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'split-squat',
@@ -856,7 +942,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 4,
         reps: 8,
-        notes: 'Use dumbbells for added resistance'
+        notes: 'Use dumbbells for added resistance',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'stiff-rdl',
@@ -864,7 +952,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 4,
         reps: 8,
-        notes: 'Use dumbbells'
+        notes: 'Use dumbbells',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'hip-extension',
@@ -872,7 +962,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 4,
         reps: 8,
-        notes: 'Focus on glute contraction'
+        notes: 'Focus on glute contraction',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'cardio-10min',
@@ -880,7 +972,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'cardio',
         sets: 1,
         reps: 1,
-        notes: 'Light cardio for recovery'
+        notes: 'Light cardio for recovery',
+        exerciseType: 'cardio',
+        duration: 10
       }
     ];
 
@@ -892,7 +986,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'chest',
         sets: 4,
         reps: 8,
-        notes: 'Progressive weight increase'
+        notes: 'Progressive weight increase',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'chest-press-machine',
@@ -900,7 +996,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'chest',
         sets: 4,
         reps: 8,
-        notes: 'Alternate with Incline DB Press'
+        notes: 'Alternate with Incline DB Press',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'cable-chest-flys',
@@ -908,7 +1006,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'chest',
         sets: 4,
         reps: 10,
-        notes: 'Focus on squeezing chest'
+        notes: 'Focus on squeezing chest',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'shoulder-press',
@@ -916,7 +1016,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'shoulders',
         sets: 4,
         reps: 8,
-        notes: 'Dumbbell variation'
+        notes: 'Dumbbell variation',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'upright-row',
@@ -924,7 +1026,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'shoulders',
         sets: 4,
         reps: 8,
-        notes: 'Keep elbows high'
+        notes: 'Keep elbows high',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'lateral-raises',
@@ -932,7 +1036,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'shoulders',
         sets: 4,
         reps: 8,
-        notes: 'Control the movement'
+        notes: 'Control the movement',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'tricep-extension',
@@ -940,7 +1046,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'arms',
         sets: 4,
         reps: 10,
-        notes: '1 set warm up and 3 working sets'
+        notes: '1 set warm up and 3 working sets',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'stairmill-cardio',
@@ -948,7 +1056,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'cardio',
         sets: 1,
         reps: 1,
-        notes: '15 min at 7-9 km/h, include abs'
+        notes: '15 min at 7-9 km/h, include abs',
+        exerciseType: 'cardio',
+        duration: 15
       }
     ];
 
@@ -960,7 +1070,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 4,
         reps: 10,
-        notes: 'Superset, use dumbbells'
+        notes: 'Superset, use dumbbells',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'reverse-lunges',
@@ -968,7 +1080,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 4,
         reps: 8,
-        notes: 'Maintain balance throughout'
+        notes: 'Maintain balance throughout',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'leg-extension-dropset',
@@ -976,7 +1090,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 4,
         reps: 10,
-        notes: '2x: 10,8,6 reps with decreasing weights'
+        notes: '2x: 10,8,6 reps with decreasing weights',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'calf-raises',
@@ -984,7 +1100,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'legs',
         sets: 4,
         reps: 10,
-        notes: 'Add weight as you progress'
+        notes: 'Add weight as you progress',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'treadmill-incline',
@@ -992,7 +1110,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'cardio',
         sets: 1,
         reps: 1,
-        notes: '15 mins at 12 incline'
+        notes: '15 mins at 12 incline',
+        exerciseType: 'cardio',
+        duration: 15
       }
     ];
 
@@ -1004,7 +1124,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'cardio',
         sets: 1,
         reps: 1,
-        notes: '30 minutes session'
+        notes: '30 minutes session',
+        exerciseType: 'cardio',
+        duration: 30
       },
       {
         id: 'abs-circuit-1',
@@ -1012,7 +1134,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'core',
         sets: 4,
         reps: 1,
-        notes: 'V-Ups (10 reps) + Supported In/Out (20 reps)'
+        notes: 'V-Ups (10 reps) + Supported In/Out (20 reps)',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'abs-circuit-2',
@@ -1020,7 +1144,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'core',
         sets: 4,
         reps: 1,
-        notes: 'Kick-outs (10 reps) + Leg Raises (10 reps)'
+        notes: 'Kick-outs (10 reps) + Leg Raises (10 reps)',
+        exerciseType: 'strength',
+        duration: 0
       },
       {
         id: 'abs-circuit-3',
@@ -1028,7 +1154,9 @@ export default function CreateMesocyclePage() {
         muscleGroup: 'core',
         sets: 4,
         reps: 1,
-        notes: 'Mountain Climbers (30 reps) + Burpees (10 reps)'
+        notes: 'Mountain Climbers (30 reps) + Burpees (10 reps)',
+        exerciseType: 'strength',
+        duration: 0
       }
     ];
 
@@ -1319,22 +1447,22 @@ export default function CreateMesocyclePage() {
                                   {/* Check if group exists in exerciseTemplates before mapping */}
                                   {exerciseTemplates[group as keyof typeof exerciseTemplates] ? 
                                     exerciseTemplates[group as keyof typeof exerciseTemplates].map((exercise, exIndex) => {
-                                      // Apply progressive overload calculations
-                                      const weeklyOverload = (weekNumber - 1) * (progression / 100);
-                                      const adjustedWeight = 1 + weeklyOverload;
-                                      let repAdjustment = 0;
-                                      if (weekNumber > 1) repAdjustment = -1;
-                                      if (weekNumber > 2) repAdjustment = -2;
-                                      
-                                      return (
-                                        <div key={exIndex} className="text-sm py-1 flex flex-wrap items-center">
-                                          <span className="font-medium mr-2">{exercise.name}</span>
-                                          <span className="text-gray-400">
-                                            {exercise.targetSets} × {Math.max(4, exercise.targetReps + repAdjustment)} 
-                                            {weekNumber > 1 ? ` (${Math.round(adjustedWeight * 100)}% weight)` : ''}
-                                          </span>
-                                        </div>
-                                      );
+                                    // Apply progressive overload calculations
+                                    const weeklyOverload = (weekNumber - 1) * (progression / 100);
+                                    const adjustedWeight = 1 + weeklyOverload;
+                                    let repAdjustment = 0;
+                                    if (weekNumber > 1) repAdjustment = -1;
+                                    if (weekNumber > 2) repAdjustment = -2;
+                                    
+                                    return (
+                                      <div key={exIndex} className="text-sm py-1 flex flex-wrap items-center">
+                                        <span className="font-medium mr-2">{exercise.name}</span>
+                                        <span className="text-gray-400">
+                                          {exercise.targetSets} × {Math.max(4, exercise.targetReps + repAdjustment)} 
+                                          {weekNumber > 1 ? ` (${Math.round(adjustedWeight * 100)}% weight)` : ''}
+                                        </span>
+                                      </div>
+                                    );
                                     })
                                   : <div className="text-sm text-gray-500">Custom exercises will be used</div>}
                                 </div>

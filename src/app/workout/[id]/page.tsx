@@ -870,8 +870,8 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
     const oldSet = exercise.sets[setIndex];
     const newSet = {
       ...oldSet,
-      [field]: value
-    };
+            [field]: value
+          };
     
     // Replace the old set with the new one
     exercise.sets[setIndex] = newSet;
@@ -2666,69 +2666,69 @@ export default function WorkoutDetailPage({ params }: { params: { id: string } }
                   </div>
                 ) : (
                   // Standard exercise with sets and reps
-                  <div className="p-4">
-                    <div className="text-xs text-gray-500 flex mb-3">
-                      <div className="w-8 text-center">#</div>
-                      <div className="flex-1 text-center">WEIGHT</div>
-                      <div className="flex-1 text-center">REPS</div>
-                      <div className="w-12 text-center">DONE</div>
-                    </div>
-                    
+                <div className="p-4">
+                  <div className="text-xs text-gray-500 flex mb-3">
+                    <div className="w-8 text-center">#</div>
+                    <div className="flex-1 text-center">WEIGHT</div>
+                    <div className="flex-1 text-center">REPS</div>
+                    <div className="w-12 text-center">DONE</div>
+                  </div>
+                  
                     {Array.isArray(exercise.sets) ? (
                       exercise.sets.map((set: any, setIndex: number) => (
-                        <div key={set.id} className="flex items-center py-2 border-t border-gray-800/50">
-                          <div className="w-8 text-center text-sm">{set.number || setIndex + 1}</div>
-                          
-                          <div className="flex-1 px-2 flex justify-center">
-                            <input
-                              type="number"
-                              value={set.completedWeight || set.targetWeight || ''}
-                              onChange={(e) => updateSetDetails(
-                                exerciseIndex, 
-                                setIndex, 
-                                'completedWeight', 
-                                e.target.value
-                              )}
-                              className="w-48 bg-gray-800 rounded text-center py-2 focus:ring-1 focus:ring-neon-green outline-none"
-                              min="0"
-                              placeholder={set.targetWeight || "0"}
-                            />
-                          </div>
-                          
-                          <div className="flex-1 px-2 flex justify-center">
-                            <input
-                              type="number"
-                              value={set.completedReps || set.targetReps}
-                              onChange={(e) => updateSetDetails(
-                                exerciseIndex, 
-                                setIndex, 
-                                'completedReps', 
-                                e.target.value
-                              )}
-                              className="w-48 bg-gray-800 rounded text-center py-2 focus:ring-1 focus:ring-neon-green outline-none"
-                              min="0"
-                              placeholder="0"
-                            />
-                          </div>
-                          
-                          <div className="w-12 flex justify-center">
-                            <button
-                              onClick={() => toggleSetCompletion(exercise.id, set.id)}
-                              className="w-6 h-6 flex items-center justify-center"
-                            >
-                              {completedSets.has(`${exercise.id}-${set.id}`) ? (
-                                <CheckCircle className="w-5 h-5 text-neon-green" />
-                              ) : (
-                                <Circle className="w-5 h-5 text-gray-600" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
+                    <div key={set.id} className="flex items-center py-2 border-t border-gray-800/50">
+                      <div className="w-8 text-center text-sm">{set.number || setIndex + 1}</div>
+                      
+                      <div className="flex-1 px-2 flex justify-center">
+                        <input
+                          type="number"
+                          value={set.completedWeight || set.targetWeight || ''}
+                          onChange={(e) => updateSetDetails(
+                            exerciseIndex, 
+                            setIndex, 
+                            'completedWeight', 
+                            e.target.value
+                          )}
+                          className="w-48 bg-gray-800 rounded text-center py-2 focus:ring-1 focus:ring-neon-green outline-none"
+                          min="0"
+                          placeholder={set.targetWeight || "0"}
+                        />
+                      </div>
+                      
+                      <div className="flex-1 px-2 flex justify-center">
+                        <input
+                          type="number"
+                          value={set.completedReps || set.targetReps}
+                          onChange={(e) => updateSetDetails(
+                            exerciseIndex, 
+                            setIndex, 
+                            'completedReps', 
+                            e.target.value
+                          )}
+                          className="w-48 bg-gray-800 rounded text-center py-2 focus:ring-1 focus:ring-neon-green outline-none"
+                          min="0"
+                          placeholder="0"
+                        />
+                      </div>
+                      
+                      <div className="w-12 flex justify-center">
+                        <button
+                          onClick={() => toggleSetCompletion(exercise.id, set.id)}
+                          className="w-6 h-6 flex items-center justify-center"
+                        >
+                          {completedSets.has(`${exercise.id}-${set.id}`) ? (
+                            <CheckCircle className="w-5 h-5 text-neon-green" />
+                          ) : (
+                            <Circle className="w-5 h-5 text-gray-600" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
                       ))
                     ) : (
                       <div className="flex justify-center items-center py-4 text-gray-400">
                         Click &quot;Add Set&quot; to add sets to this exercise
-                      </div>
+                </div>
                     )}
                   </div>
                 )}
