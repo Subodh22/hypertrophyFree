@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
-import { format, addWeeks } from 'date-fns';
+import { format, addWeeks, parse } from 'date-fns';
 import { createMesocycleAsync, createMesocycle } from '@/lib/slices/workoutSlice';
 import { RootState } from '@/lib/store';
 import { Dumbbell, Calendar, ArrowLeft, ChevronDown, ChevronUp, Plus, X, AlertTriangle } from 'lucide-react';
@@ -151,6 +151,7 @@ export default function CreateMesocyclePage() {
   
   const [name, setName] = useState('4-Week Hypertrophy Block');
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [displayDate, setDisplayDate] = useState(format(new Date(), 'MM/dd/yyyy'));
   const [weeks, setWeeks] = useState(4);
   const [progression, setProgression] = useState(5); // 5% weekly progression
   const [includeDeload, setIncludeDeload] = useState(false);
@@ -795,6 +796,23 @@ export default function CreateMesocyclePage() {
   // Calculate number of workouts in the template
   const workoutsPerWeek = weeklyTemplates[selectedTemplate as keyof typeof weeklyTemplates].length;
   
+  // Handle date input change
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDisplayDate = e.target.value;
+    setDisplayDate(newDisplayDate);
+    
+    try {
+      // Try to parse the date
+      const parsedDate = parse(newDisplayDate, 'MM/dd/yyyy', new Date());
+      if (!isNaN(parsedDate.getTime())) {
+        setStartDate(format(parsedDate, 'yyyy-MM-dd'));
+      }
+    } catch (error) {
+      // If parsing fails, just update the display date
+      console.error('Date parsing error:', error);
+    }
+  };
+  
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 pb-24">
       <div className="flex items-center mb-6">
@@ -820,7 +838,22 @@ export default function CreateMesocyclePage() {
       )}
       
       <div className="card p-6 mb-8">
-        <h2 className="text-xl font-bold mb-4">Mesocycle Details</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Mesocycle Details</h2>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="btn-primary py-2 px-4 flex items-center gap-2"
+          >
+            {loading ? (
+              <span>Creating...</span>
+            ) : (
+              <>
+                <Plus className="w-5 h-5" /> Create Mesocycle
+              </>
+            )}
+          </button>
+        </div>
         
         <div className="space-y-4">
           <div>
@@ -837,10 +870,11 @@ export default function CreateMesocyclePage() {
           <div>
             <label className="text-sm text-gray-400 block mb-1">Start Date</label>
             <input
-              type="date"
+              type="text"
               className="input-field w-full"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              value={displayDate}
+              onChange={handleDateChange}
+              placeholder="MM/DD/YYYY"
             />
           </div>
           
@@ -998,28 +1032,6 @@ export default function CreateMesocyclePage() {
             );
           })}
         </div>
-      </div>
-      
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-gray-800 p-4 flex justify-between mb-16">
-        <button
-          onClick={() => router.back()}
-          className="btn-secondary py-3 px-6"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="btn-primary py-3 px-6 flex items-center gap-2"
-        >
-          {loading ? (
-            <span>Creating...</span>
-          ) : (
-            <>
-              <Plus className="w-5 h-5" /> Create Mesocycle
-            </>
-          )}
-        </button>
       </div>
     </div>
   );
